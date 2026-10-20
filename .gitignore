@@ -20,3 +20,4 @@ tsconfig.tsbuildinfo
 # Cliente do Prisma, gerado pelo schema. Recriado por `prisma generate`,
 # que o `npm run build` já executa.
 src/generated/
+*:Zone.Identifier
