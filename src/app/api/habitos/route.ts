@@ -77,13 +77,20 @@ export async function POST(requisicao: Request) {
       ? null
       : Number(corpo.metaPorSemana);
 
+  // Vai para o fim da lista. Mesma história da pilha: `ordem` é Int de 32
+  // bits, então nada de timestamp aqui.
+  const maiorOrdem = await prisma.habito.aggregate({
+    _max: { ordem: true },
+    where: { deletadoEm: null },
+  });
+
   const criado = await prisma.habito.create({
     data: {
       nome,
       icone: corpo.icone ? String(corpo.icone) : null,
       metaPorSemana,
       diasDaSemana,
-      ordem: Date.now() % 100000,
+      ordem: (maiorOrdem._max.ordem ?? 0) + 1,
     },
   });
 
