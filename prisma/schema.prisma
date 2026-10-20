@@ -1,0 +1,135 @@
+// Schema da agenda pessoal.
+//
+// Três entidades independentes, como decidimos:
+//   Evento  — ocupa tempo, pode conflitar, pode repetir
+//   Tarefa  — tem estado (feita / não feita), data e hora são ambas opcionais
+//   Habito  — nunca fica pendente; o que existe é o registro dos dias
+//
+// O tipo de uma tarefa NÃO é um campo. Ele é consequência de ter ou não
+// data e hora:
+//   data = null                  -> tarefa flutuante (vai para a pilha)
+//   data preenchida, hora = null -> tarefa do dia
+//   data e hora preenchidas      -> tarefa ancorada (entra na linha do tempo)
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+// No Prisma 7 a URL não mora mais aqui: a conexão do app vem do adaptador
+// (src/lib/prisma.ts) e a das migrações vem do prisma.config.ts.
+datasource db {
+  provider = "postgresql"
+}
+
+model Evento {
+  id String @id @default(uuid()) @db.Uuid
+
+  titulo String
+  nota   String?
+  local  String?
+  cor    String  @default("verde")
+
+  // Instantes absolutos (timestamptz). O fuso fica guardado ao lado para
+  // que evento recorrente continue às 9h quando o horário de verão mudar.
+  inicio      DateTime
+  fim         DateTime
+  fusoHorario String   @default("America/Sao_Paulo")
+
+  // Recorrência no padrão iCalendar (RFC 5545). Exemplo:
+  // "FREQ=WEEKLY;BYDAY=TU". Nulo = evento único.
+  // Nunca inventar formato próprio aqui: é o que permite exportar .ics.
+  rrule String?
+
+  // Exceções da série: uma linha filha aponta para o evento pai e diz
+  // "nesta data, foi assim". Mover ou cancelar uma ocorrência não quebra
+  // a regra da série.
+  eventoPaiId  String?   @db.Uuid
+  eventoPai    Evento?   @relation("SerieDoEvento", fields: [eventoPaiId], references: [id], onDelete: Cascade)
+  excecoes     Evento[]  @relation("SerieDoEvento")
+  dataOriginal DateTime?
+  cancelado    Boolean   @default(false)
+
+  criadoEm     DateTime  @default(now())
+  atualizadoEm DateTime  @updatedAt
+  deletadoEm   DateTime?
+
+  @@index([inicio])
+  @@index([eventoPaiId])
+}
+
+model Tarefa {
+  id String @id @default(uuid()) @db.Uuid
+
+  titulo String
+  nota   String?
+
+  // Dia do calendário, sem hora e sem fuso. Nulo = tarefa flutuante.
+  data DateTime? @db.Date
+
+  // "HH:mm" em texto, de propósito: guardar como DateTime faria o horário
+  // de verão mover a tarefa de lugar. Nulo = tarefa do dia todo.
+  hora String?
+
+  // Nulo = pendente. Preenchido = feita, e a data original fica intacta,
+  // então o histórico sabe que foi concluída com atraso.
+  concluidaEm DateTime?
+
+  // Preenchido quando a tarefa venceu, ficou 7 dias na lista de atrasadas
+  // e saiu de circulação. Nada é apagado: ela vai para o histórico
+  // marcada como não feita.
+  arquivadaEm DateTime?
+
+  // Quantas vezes você já empurrou essa mesma tarefa para frente.
+  adiadaVezes Int @default(0)
+
+  // Posição na pilha, para a ordenação manual.
+  ordem Int @default(0)
+
+  criadoEm     DateTime  @default(now())
+  atualizadoEm DateTime  @updatedAt
+  deletadoEm   DateTime?
+
+  @@index([data])
+  @@index([concluidaEm])
+  @@index([arquivadaEm])
+}
+
+model Habito {
+  id String @id @default(uuid()) @db.Uuid
+
+  nome  String
+  icone String?
+  ativo Boolean @default(true)
+  ordem Int     @default(0)
+
+  // Um hábito tem UM dos dois, nunca os dois:
+  //   metaPorSemana = 4            -> "4x por semana, tanto faz o dia"
+  //   diasDaSemana  = [1, 3, 5]    -> "segunda, quarta e sexta"
+  // Com dias fixos, a série conta dias programados: faltar no domingo
+  // não quebra nada se domingo não era dia.
+  metaPorSemana Int?
+  diasDaSemana  Int[] @default([])
+
+  registros RegistroHabito[]
+
+  criadoEm     DateTime  @default(now())
+  atualizadoEm DateTime  @updatedAt
+  deletadoEm   DateTime?
+}
+
+model RegistroHabito {
+  id String @id @default(uuid()) @db.Uuid
+
+  habitoId String @db.Uuid
+  habito   Habito @relation(fields: [habitoId], references: [id], onDelete: Cascade)
+
+  // Dia do calendário. A existência da linha É a marcação: dia sem
+  // registro simplesmente não gera linha, não gera pendência.
+  data DateTime @db.Date
+
+  criadoEm DateTime @default(now())
+
+  @@unique([habitoId, data])
+  @@index([data])
+}

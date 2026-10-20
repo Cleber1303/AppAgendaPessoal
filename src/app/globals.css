@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+/* As cores das telas que desenhamos, com nome em vez de hexadecimal. */
+@theme {
+  --color-fundo: #f4f4f1;
+  --color-papel: #ffffff;
+  --color-tinta: #141619;
+  --color-tinta-fraca: #5e636b;
+  --color-tinta-apagada: #8a8f97;
+  --color-borda: #e2e2dd;
+  --color-borda-leve: #e8e8e3;
+  --color-verde: #2e6f5e;
+  --color-verde-escuro: #1c4a3d;
+  --color-verde-claro: #e6f0ec;
+  --color-ambar: #9a5b06;
+  --color-ambar-claro: #f6eedf;
+  --color-ambar-borda: #e3c98e;
+  --color-cinza-falhou: #dbdbd4;
+
+  --font-corpo: var(--fonte-corpo), system-ui, sans-serif;
+  --font-mono: var(--fonte-mono), ui-monospace, monospace;
+}
+
+html {
+  background: var(--color-fundo);
+  /* Evita o zoom automático do iOS ao focar um campo. */
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--color-fundo);
+  color: var(--color-tinta);
+  font-family: var(--font-corpo);
+  margin: 0;
+  /* O app é uma tela de celular: nada de rolagem horizontal. */
+  overflow-x: hidden;
+}
+
+/* Área segura do iPhone, para a barra de baixo não ficar sob o indicador. */
+.rodape-seguro {
+  padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0.5rem));
+}
+
+/* Toque não deve piscar azul no celular. */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
