@@ -12,9 +12,16 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { SeletorDeRepeticao } from "@/components/SeletorDeRepeticao";
 import { avisarAtualizacao } from "@/lib/atualizacao";
 import { criarEvento, criarHabito, criarTarefa } from "@/lib/dados";
 import { hoje } from "@/lib/datas";
+import {
+  primeiroDiaQueBate,
+  repeticaoParaRrule,
+  SEM_REPETICAO,
+  type Repeticao,
+} from "@/lib/repeticao";
 
 type Aba = "tarefa" | "evento" | "habito";
 
@@ -41,7 +48,10 @@ export function NovoItem() {
   const [horaInicio, setHoraInicio] = useState("14:00");
   const [horaFim, setHoraFim] = useState("15:30");
   const [local, setLocal] = useState("");
-  const [repeteSemanalmente, setRepeteSemanalmente] = useState(false);
+  const [repeticao, setRepeticao] = useState<Repeticao>(SEM_REPETICAO);
+  const [repeticaoAberta, setRepeticaoAberta] = useState(false);
+  /** Verdadeiro quando você mexeu na data à mão; falso enquanto ela se deriva. */
+  const [dataEscolhidaAMao, setDataEscolhidaAMao] = useState(false);
 
   // Hábito
   const [modoDoHabito, setModoDoHabito] = useState<"meta" | "dias">("meta");
@@ -99,7 +109,9 @@ export function NovoItem() {
     setHoraInicio("14:00");
     setHoraFim("15:30");
     setLocal("");
-    setRepeteSemanalmente(false);
+    setRepeticao(SEM_REPETICAO);
+    setRepeticaoAberta(false);
+    setDataEscolhidaAMao(false);
     setModoDoHabito("meta");
     setMeta(4);
     setDiasFixos([]);
@@ -113,6 +125,30 @@ export function NovoItem() {
     // Hora sem dia não existe no modelo: desligar o dia desliga a hora.
     if (!novoValor) {
       setTemHora(false);
+    }
+  }
+
+  /**
+   * Trocar a repetição recalcula a data do evento.
+   *
+   * Com repetição, a data deixa de ser escolha e passa a ser a primeira
+   * ocorrência da regra — por isso o campo muda de "Dia" para "Começa em".
+   * Continua editável para quem quiser começar a série mais tarde.
+   */
+  function mudarRepeticao(nova: Repeticao) {
+    setRepeticao(nova);
+
+    if (nova.tipo !== "nao") {
+      // Enquanto a data está se derivando, a conta parte de hoje. Partir
+      // do valor que está no campo faria a data só avançar: trocar de
+      // segunda para quinta daria a quinta da semana seguinte, nunca a
+      // desta semana.
+      //
+      // Quem escolheu a data à mão é outra história: aí a série começa
+      // onde a pessoa mandou.
+      const partida = dataEscolhidaAMao ? diaDoEvento : hoje();
+
+      setDiaDoEvento(primeiroDiaQueBate(nova, partida));
     }
   }
 
@@ -154,7 +190,7 @@ export function NovoItem() {
           horaInicio,
           horaFim,
           local: local.trim() === "" ? null : local.trim(),
-          rrule: repeteSemanalmente ? `FREQ=WEEKLY;BYDAY=${siglaDoDia(diaDoEvento)}` : null,
+          rrule: repeticaoParaRrule(repeticao),
         });
       } else {
         await criarHabito({
@@ -291,7 +327,14 @@ export function NovoItem() {
 
             {aba === "evento" && (
               <>
-                <CampoDeData rotulo="Dia" valor={diaDoEvento} aoMudar={setDiaDoEvento} />
+                <CampoDeData
+                  rotulo={repeticao.tipo === "nao" ? "Dia" : "Começa em"}
+                  valor={diaDoEvento}
+                  aoMudar={(valor) => {
+                    setDiaDoEvento(valor);
+                    setDataEscolhidaAMao(true);
+                  }}
+                />
                 <CampoDeHora rotulo="Início" valor={horaInicio} aoMudar={setHoraInicio} />
                 <CampoDeHora rotulo="Fim" valor={horaFim} aoMudar={setHoraFim} />
 
@@ -309,11 +352,12 @@ export function NovoItem() {
                   />
                 </div>
 
-                <Interruptor
-                  titulo="Repete toda semana"
-                  auxiliar={`Toda ${nomeLongoDoDia(diaDoEvento)}`}
-                  ligado={repeteSemanalmente}
-                  aoAlternar={() => setRepeteSemanalmente(!repeteSemanalmente)}
+                <SeletorDeRepeticao
+                  repeticao={repeticao}
+                  diaDoEvento={diaDoEvento}
+                  aberto={repeticaoAberta}
+                  aoAlternarAbertura={() => setRepeticaoAberta(!repeticaoAberta)}
+                  aoMudar={mudarRepeticao}
                 />
               </>
             )}
@@ -388,17 +432,15 @@ export function NovoItem() {
   );
 }
 
-/** "TU" — a sigla que a regra de recorrência usa. */
-function siglaDoDia(dia: string): string {
-  const siglas = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"];
-
-  return siglas[new Date(`${dia}T00:00:00.000Z`).getUTCDay()];
-}
-
-function nomeLongoDoDia(dia: string): string {
-  const nomes = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
-
-  return nomes[new Date(`${dia}T00:00:00.000Z`).getUTCDay()];
+/**
+ * Transforma o rótulo num identificador válido.
+ *
+ * "Começa em" vira "come-a-em": id de HTML não aceita espaço, e sem isso
+ * o `for` do rótulo deixa de casar com o campo — o toque no texto para de
+ * abrir o seletor de data.
+ */
+function paraIdentificador(rotulo: string): string {
+  return rotulo.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 }
 
 function AbaBotao({
@@ -472,7 +514,7 @@ function CampoDeData({
   valor: string;
   aoMudar: (valor: string) => void;
 }) {
-  const identificador = `campo-novo-${rotulo.toLowerCase()}`;
+  const identificador = `campo-novo-${paraIdentificador(rotulo)}`;
 
   return (
     <div className="flex min-h-14 items-center gap-3 border-b border-borda-leve">
@@ -499,7 +541,7 @@ function CampoDeHora({
   valor: string;
   aoMudar: (valor: string) => void;
 }) {
-  const identificador = `campo-novo-${rotulo.toLowerCase()}`;
+  const identificador = `campo-novo-${paraIdentificador(rotulo)}`;
 
   return (
     <div className="flex min-h-14 items-center gap-3 border-b border-borda-leve">
