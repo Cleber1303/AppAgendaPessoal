@@ -33,7 +33,7 @@ import { CSS } from "@dnd-kit/utilities";
 import Link from "next/link";
 import { useState } from "react";
 import { CaixaDeMarcar } from "@/components/CaixaDeMarcar";
-import { Carregando, Falhou, IconeMais, Vazio } from "@/components/Avisos";
+import { Carregando, Falhou, Vazio } from "@/components/Avisos";
 import { carregarPilha, concluirTarefa, reordenarPilha } from "@/lib/dados";
 import { DIAS_PARA_ENVELHECER, TETO_DA_PILHA, type ItemDaPilha } from "@/lib/tipos";
 import { usarDados } from "@/lib/usarDados";
@@ -109,9 +109,8 @@ export default function TelaPilha() {
     <>
       <header className="border-b border-borda bg-papel px-5 pt-4 pb-3.5">
         <h1 className="m-0 text-2xl font-semibold tracking-tight">Pilha</h1>
-        <p className="mt-1 mb-0 text-[13px] text-tinta-fraca">Sem data. Faço quando der.</p>
 
-        <div className="mt-3.5 flex items-center gap-2.5">
+        <div className="mt-3 flex items-center gap-2.5">
           <div className="h-1.5 flex-1 overflow-hidden rounded-sm bg-borda-leve">
             <div
               className="h-1.5 bg-verde transition-[width] duration-300 ease-out"
@@ -164,28 +163,10 @@ export default function TelaPilha() {
             </SortableContext>
           </DndContext>
 
-          <div className="mt-3.5 mb-4 rounded-[10px] bg-ambar-claro px-3.5 py-3">
-            <div className="font-mono text-[9.5px] tracking-[0.12em] text-ambar uppercase">
-              Regra da pilha
-            </div>
-            <p className="mt-1.5 mb-0 text-[12.5px] leading-relaxed text-[#4A4D53]">
-              Passou de {DIAS_PARA_ENVELHECER} dias, o item sobe e fica âmbar. Chegou a{" "}
-              {TETO_DA_PILHA} itens, só entra novo depois de tirar um. Para mudar a ordem,
-              arraste pela alça à esquerda.
-            </p>
-          </div>
+          <div className="h-6" />
         </main>
       )}
 
-      <Link
-        href="/novo"
-        aria-label="Novo item"
-        className="pointer-events-none fixed bottom-24 left-1/2 flex w-full max-w-md -translate-x-1/2 justify-end pr-5 no-underline"
-      >
-        <span className="pointer-events-auto flex size-14 items-center justify-center rounded-full bg-verde text-white shadow-[0_5px_14px_rgba(20,22,25,0.2)] transition-transform duration-150 active:scale-90">
-          <IconeMais />
-        </span>
-      </Link>
     </>
   );
 }

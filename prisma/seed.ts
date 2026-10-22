@@ -193,24 +193,38 @@ async function main() {
 
   console.log("Marcando as últimas semanas…");
 
+  /**
+   * Sorteio determinístico entre 0 e 1.
+   *
+   * Nada de `paraTras % 7`: o resto por 7 tem o mesmo período da semana,
+   * então ele acerta sempre o mesmo dia e apaga uma segunda-feira inteira
+   * do histórico — o mapa fica com uma listra e dá a impressão de que o
+   * app está errado. Um gerador de verdade espalha as faltas.
+   */
+  function sorteio(semente: number): number {
+    const estado = (semente * 1103515245 + 12345) % 2147483648;
+
+    return estado / 2147483648;
+  }
+
   for (let paraTras = 0; paraTras < 84; paraTras = paraTras + 1) {
     const diaMarcado = somarDias(dia, -paraTras);
     const diaDaSemana = diaParaData(diaMarcado).getUTCDay();
 
-    // Academia só nos dias dela, e com algumas faltas.
-    if ([1, 3, 5].includes(diaDaSemana) && paraTras % 7 !== 3) {
+    // Academia só nos dias dela, e com algumas faltas espalhadas.
+    if ([1, 3, 5].includes(diaDaSemana) && sorteio(paraTras + 1) < 0.8) {
       await prisma.registroHabito.create({
         data: { habitoId: academia.id, data: diaParaData(diaMarcado) },
       });
     }
 
-    if (paraTras % 3 !== 0) {
+    if (sorteio(paraTras + 500) < 0.65) {
       await prisma.registroHabito.create({
         data: { habitoId: estudar.id, data: diaParaData(diaMarcado) },
       });
     }
 
-    if (paraTras % 2 === 0) {
+    if (sorteio(paraTras + 900) < 0.45) {
       await prisma.registroHabito.create({
         data: { habitoId: ler.id, data: diaParaData(diaMarcado) },
       });

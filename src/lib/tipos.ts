@@ -79,12 +79,18 @@ export type Dia = {
   totalNaPilha: number;
 };
 
-/** Uma faixa da tela "Semana". */
+/**
+ * Uma faixa da tela "Semana".
+ *
+ * Sem hábitos de propósito: a semana responde "onde tem compromisso", e
+ * hábito não é compromisso. Quem quer ver hábito vai em Hoje ou na tela
+ * do próprio hábito, onde cada um aparece com nome.
+ */
 export type DiaDaSemana = {
   dia: DiaTexto;
   eventos: Evento[];
-  totalTarefas: number;
-  habitos: { id: string; estado: EstadoDoHabito }[];
+  /** Todas as tarefas do dia, feitas ou não — a tela decide o que mostrar. */
+  tarefas: Tarefa[];
 };
 
 export type TarefaAtrasada = Tarefa & {

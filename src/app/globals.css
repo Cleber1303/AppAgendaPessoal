@@ -69,12 +69,100 @@ body {
 }
 
 /*
+ * O pop-up de criar item.
+ *
+ * O <dialog> nativo entrega Esc, travamento de foco e camada por cima de
+ * tudo. O que ele NÃO entrega de forma confiável aqui é a aparência: o
+ * reset do Tailwind zera a margem de todo elemento, e é justamente o
+ * `margin: auto` do navegador que centraliza um dialog modal — sem ele,
+ * o pop-up vai para o canto superior esquerdo.
+ *
+ * Por isso o próprio <dialog> é a camada escura que ocupa a tela inteira,
+ * e o cartão é centralizado dentro dele. Assim nada depende do
+ * ::backdrop, cujo suporte a desfoque ainda varia entre navegadores.
+ */
+.pop-up {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  max-height: 100%;
+  margin: 0;
+  padding: 1rem;
+  border: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: rgba(20, 22, 25, 0.38);
+  /*
+   * Sem escrever -webkit-backdrop-filter aqui: o compilador do Tailwind
+   * põe o prefixo sozinho conforme os navegadores alvo. Declarar os dois
+   * à mão faz ele juntar as duas linhas e manter só a prefixada, e aí o
+   * desfoque some justamente nos navegadores que usam a padrão.
+   */
+  backdrop-filter: blur(6px);
+}
+
+/* Trocamos o display padrão por flex, então o fechado precisa voltar. */
+.pop-up:not([open]) {
+  display: none;
+}
+
+/* O backdrop de verdade sai do caminho: quem escurece é o dialog. */
+.pop-up::backdrop {
+  background: transparent;
+}
+
+@keyframes popUpEntrar {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes fundoEntrar {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.pop-up[open] {
+  animation: fundoEntrar 200ms ease-out both;
+}
+
+.pop-up[open] .pop-up-cartao {
+  animation: popUpEntrar 220ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+/* Fechando: a classe entra antes do close() para a saída aparecer. */
+.pop-up.saindo {
+  animation: fundoEntrar 150ms ease-in reverse both;
+}
+
+.pop-up.saindo .pop-up-cartao {
+  animation: popUpEntrar 150ms cubic-bezier(0.4, 0, 1, 1) reverse both;
+}
+
+/*
  * Quem pediu menos movimento no sistema operacional recebe menos
  * movimento. Não é detalhe de acessibilidade distante: animação de tela
  * dá enjoo em muita gente, e o sistema já sabe quem.
  */
 @media (prefers-reduced-motion: reduce) {
-  .entra {
+  .entra,
+  .pop-up[open],
+  .pop-up[open] .pop-up-cartao,
+  .pop-up.saindo,
+  .pop-up.saindo .pop-up-cartao {
     animation: none;
   }
 

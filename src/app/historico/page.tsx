@@ -97,9 +97,7 @@ export default function TelaHistorico() {
             </div>
           ))}
 
-          <p className="mt-4 mb-4 text-center text-[11.5px] leading-relaxed text-tinta-apagada">
-            Tudo que foi concluído ou expirou fica aqui.
-          </p>
+          <div className="h-6" />
         </main>
       )}
     </>

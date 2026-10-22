@@ -9,7 +9,7 @@ import Link from "next/link";
 import { Carregando, Falhou, IconeHistorico, IconeSeta, Vazio } from "@/components/Avisos";
 import { carregarAtrasadas } from "@/lib/dados";
 import { diaBarraMes } from "@/lib/datas";
-import { DIAS_ATE_EXPIRAR, type TarefaAtrasada } from "@/lib/tipos";
+import type { TarefaAtrasada } from "@/lib/tipos";
 import { usarDados } from "@/lib/usarDados";
 
 export default function TelaAtrasadas() {
@@ -19,12 +19,7 @@ export default function TelaAtrasadas() {
     <>
       <header className="border-b border-borda bg-papel px-5 pt-4 pb-3.5">
         <div className="flex items-start justify-between">
-          <div>
-            <h1 className="m-0 text-2xl font-semibold tracking-tight">Atrasadas</h1>
-            <p className="mt-1 mb-0 text-[13px] text-tinta-fraca">
-              Venceram e não foram reagendadas.
-            </p>
-          </div>
+          <h1 className="m-0 text-2xl font-semibold tracking-tight">Atrasadas</h1>
           <Link
             href="/historico"
             aria-label="Histórico"
@@ -40,24 +35,13 @@ export default function TelaAtrasadas() {
 
       {dados !== null && (
         <main className="px-5 pt-3">
-          {dados.length === 0 && <Vazio texto="Nada atrasado. Bom sinal." />}
+          {dados.length === 0 && <Vazio texto="Nada atrasado." />}
 
           {dados.map((tarefa, posicao) => (
             <LinhaAtrasada key={tarefa.id} tarefa={tarefa} posicao={posicao} />
           ))}
 
-          {dados.length > 0 && (
-            <div className="mt-3.5 rounded-[11px] border border-borda bg-papel px-3.5 py-3">
-              <div className="font-mono text-[9.5px] tracking-[0.12em] text-tinta-fraca uppercase">
-                O que acontece sozinho
-              </div>
-              <p className="mt-1.5 mb-0 text-[12.5px] leading-relaxed text-[#4A4D53]">
-                {DIAS_ATE_EXPIRAR} dias nesta lista e a tarefa sai daqui para o histórico,
-                marcada como não feita. Nada é apagado — ela continua pesquisável, só para de
-                cobrar.
-              </p>
-            </div>
-          )}
+          <div className="h-6" />
         </main>
       )}
     </>

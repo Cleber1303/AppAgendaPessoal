@@ -197,22 +197,24 @@ prisma/
   schema.prisma          as quatro tabelas, comentadas
   seed.ts                dados de exemplo
 src/lib/
-  datas.ts               fuso, dias, "HH:mm" — nenhuma tela faz essa conta
+  datas.ts               fuso, dias, meses — nenhuma tela faz essa conta
   tipos.ts               o que trafega entre API e tela, e as constantes
   servidor.ts            recorrência, estado dos hábitos, tradução do banco
   dados.ts               ÚNICO ponto de rede do app
   usarDados.ts           o hook que as telas usam
+  atualizacao.ts         o aviso de "algo mudou, recarregue"
   prisma.ts              a conexão
 src/app/
   page.tsx               Hoje — e qualquer dia da semana corrente
-  semana/ pilha/ atrasadas/ historico/
+  semana/                dias retráteis, com eventos e tarefas
+  pilha/ atrasadas/ historico/
   habitos/               lista
   habitos/[id]/          histórico mês a mês de um hábito
-  novo/                  criar tarefa, evento ou hábito
   tarefa/[id]/           detalhe e adiamento
   api/                   dia, semana, tarefas, eventos, habitos, manutencao
 src/components/
   BarraInferior.tsx
+  NovoItem.tsx           o botão "+" e o pop-up de criar
   CaixaDeMarcar.tsx      a caixa de marcar animada do app
   Avisos.tsx             carregando, falhou, vazio, ícones
 src/generated/prisma/    cliente gerado — não versionado

@@ -68,7 +68,7 @@ export default function TelaHabitos() {
             </button>
           )}
 
-          <Legenda />
+          <div className="h-6" />
         </main>
       )}
     </>
@@ -125,7 +125,7 @@ function CartaoDeHabito({ habito }: { habito: HabitoComMapa }) {
       </div>
 
       <div className="mt-2 font-mono text-[9.5px] tracking-[0.08em] text-tinta-apagada uppercase">
-        12 semanas · toque para ver tudo
+        12 semanas
       </div>
     </Link>
   );
@@ -148,25 +148,6 @@ function Celula({ estado, dia }: { estado: EstadoDoHabito; dia: string }) {
         border: estado === "feito" ? "1px solid #2E6F5E" : "1px solid #EBEBE6",
       }}
     />
-  );
-}
-
-function Legenda() {
-  return (
-    <div className="mt-3 flex items-center justify-center gap-3.5">
-      <span className="flex items-center gap-1.5 text-[10.5px] text-tinta-fraca">
-        <span className="block size-2.5 rounded-[2px] bg-verde" />
-        feito
-      </span>
-      <span className="flex items-center gap-1.5 text-[10.5px] text-tinta-fraca">
-        <span className="block size-2.5 rounded-[2px] bg-cinza-falhou" />
-        falhou
-      </span>
-      <span className="flex items-center gap-1.5 text-[10.5px] text-tinta-fraca">
-        <span className="block size-2.5 rounded-[2px] border border-[#DEDED8] bg-fundo" />
-        não era dia
-      </span>
-    </div>
   );
 }
 

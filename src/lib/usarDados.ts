@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { EVENTO_DE_ATUALIZACAO } from "./atualizacao";
 
 type Estado<T> = {
   dados: T | null;
@@ -71,6 +72,16 @@ export function usarDados<T>(buscar: () => Promise<T>, dependencias: unknown[] =
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tentativa, ...dependencias]);
+
+  // O pop-up de criar item vive fora das telas. Quando ele cria algo,
+  // dispara o aviso e toda tela montada se recarrega sozinha.
+  useEffect(() => {
+    window.addEventListener(EVENTO_DE_ATUALIZACAO, recarregar);
+
+    return () => {
+      window.removeEventListener(EVENTO_DE_ATUALIZACAO, recarregar);
+    };
+  }, [recarregar]);
 
   return { dados, carregando, erro, recarregar, definirDados };
 }

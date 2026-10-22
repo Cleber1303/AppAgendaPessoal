@@ -14,7 +14,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { CaixaDeMarcar } from "@/components/CaixaDeMarcar";
-import { Carregando, Falhou, IconeHistorico, IconeMais } from "@/components/Avisos";
+import { Carregando, Falhou, IconeHistorico } from "@/components/Avisos";
 import {
   alternarHabito,
   carregarDia,
@@ -215,8 +215,6 @@ export default function TelaHoje() {
           <div className="h-6" />
         </main>
       )}
-
-      <BotaoNovo />
     </>
   );
 }
@@ -479,16 +477,3 @@ function Bolinha({ estado, destacada }: { estado: EstadoDoHabito; destacada: boo
   return <span className="block size-3.5 rounded-full border border-[#ebebe6]" />;
 }
 
-function BotaoNovo() {
-  return (
-    <Link
-      href="/novo"
-      aria-label="Novo item"
-      className="pointer-events-none fixed bottom-24 left-1/2 flex w-full max-w-md -translate-x-1/2 justify-end pr-5 no-underline"
-    >
-      <span className="pointer-events-auto flex size-14 items-center justify-center rounded-full bg-verde text-white shadow-[0_5px_14px_rgba(20,22,25,0.2)] transition-transform duration-150 active:scale-90">
-        <IconeMais />
-      </span>
-    </Link>
-  );
-}

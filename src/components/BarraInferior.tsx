@@ -14,11 +14,10 @@ const abas = [
 export function BarraInferior() {
   const caminho = usePathname();
 
-  // As telas de detalhe (criar, adiar) abrem como se fossem modais: a barra
-  // sai do caminho para não oferecer fuga no meio de um formulário.
-  const telasSemBarra = ["/novo", "/tarefa"];
-
-  if (telasSemBarra.some((prefixo) => caminho.startsWith(prefixo))) {
+  // A tela de detalhe da tarefa é um formulário: a barra sai do caminho
+  // para não oferecer fuga no meio dele. Criar item virou pop-up, então
+  // não precisa mais estar nesta lista.
+  if (caminho.startsWith("/tarefa")) {
     return null;
   }
 

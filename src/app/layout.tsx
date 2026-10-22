@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, Instrument_Sans } from "next/font/google";
 import { BarraInferior } from "@/components/BarraInferior";
+import { NovoItem } from "@/components/NovoItem";
 import "./globals.css";
 
 const fonteCorpo = Instrument_Sans({
@@ -34,6 +35,7 @@ export default function LayoutRaiz({ children }: { children: React.ReactNode }) 
       <body>
         <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col">
           <div className="flex flex-1 flex-col pb-20">{children}</div>
+          <NovoItem />
           <BarraInferior />
         </div>
       </body>

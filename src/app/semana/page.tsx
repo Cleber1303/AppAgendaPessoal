@@ -1,8 +1,19 @@
 "use client";
 
+// A visão da semana.
+//
+// Cada dia é uma caixa fechada que mostra só o resumo. Tocar abre o dia
+// inteiro — compromissos e tarefas, com e sem horário. Sete dias abertos
+// de uma vez não cabem na tela do celular, e o que você quer de relance é
+// "onde tem coisa", não o conteúdo de tudo.
+//
+// Hoje já começa aberto: é o dia que você veio ver.
+
+import Link from "next/link";
 import { useState } from "react";
+import { CaixaDeMarcar } from "@/components/CaixaDeMarcar";
 import { Carregando, Falhou } from "@/components/Avisos";
-import { carregarSemana } from "@/lib/dados";
+import { carregarSemana, concluirTarefa, reabrirTarefa } from "@/lib/dados";
 import {
   hoje,
   mesEAno,
@@ -10,19 +21,68 @@ import {
   rotuloCurto,
   semanaDe,
   somarDias,
+  type DiaTexto,
 } from "@/lib/datas";
-import type { EstadoDoHabito } from "@/lib/tipos";
+import type { DiaDaSemana, Tarefa } from "@/lib/tipos";
 import { usarDados } from "@/lib/usarDados";
 
 export default function TelaSemana() {
-  const [referencia, setReferencia] = useState(hoje());
-  const { dados, carregando, erro, recarregar } = usarDados(
+  const [referencia, setReferencia] = useState<DiaTexto>(hoje());
+  const [abertos, setAbertos] = useState<Set<DiaTexto>>(new Set([hoje()]));
+
+  const { dados, carregando, erro, recarregar, definirDados } = usarDados(
     () => carregarSemana(referencia),
     [referencia],
   );
 
   const dias = semanaDe(referencia);
   const intervalo = `${Number(numeroDoDia(dias[0]))} – ${Number(numeroDoDia(dias[6]))}`;
+
+  function alternarAbertura(dia: DiaTexto) {
+    setAbertos((anteriores) => {
+      const proximos = new Set(anteriores);
+
+      if (proximos.has(dia)) {
+        proximos.delete(dia);
+      } else {
+        proximos.add(dia);
+      }
+
+      return proximos;
+    });
+  }
+
+  function alternarTarefa(id: string, feita: boolean) {
+    const marca = feita ? new Date().toISOString() : null;
+
+    definirDados((anterior) =>
+      anterior === null
+        ? anterior
+        : anterior.map((faixa) => ({
+            ...faixa,
+            tarefas: faixa.tarefas.map((tarefa) =>
+              tarefa.id === id ? { ...tarefa, concluidaEm: marca } : tarefa,
+            ),
+          })),
+    );
+
+    const requisicao = feita ? concluirTarefa(id) : reabrirTarefa(id);
+
+    requisicao.catch(() => {
+      recarregar();
+    });
+  }
+
+  function irParaSemana(deslocamento: number) {
+    const nova = somarDias(referencia, deslocamento);
+
+    setReferencia(nova);
+
+    // Ao mudar de semana, abre o primeiro dia que tem alguma coisa — ou
+    // hoje, se ele estiver nessa semana. Sete caixas fechadas e nenhuma
+    // pista do que tem dentro seria pior que o que havia antes.
+    setAbertos(new Set(semanaDe(nova).includes(hoje()) ? [hoje()] : []));
+  }
 
   return (
     <>
@@ -38,7 +98,7 @@ export default function TelaSemana() {
           <button
             type="button"
             aria-label="Semana anterior"
-            onClick={() => setReferencia(somarDias(referencia, -7))}
+            onClick={() => irParaSemana(-7)}
             className="flex size-11 items-center justify-center border-0 bg-transparent text-tinta-fraca transition-transform duration-150 active:scale-75"
           >
             <svg
@@ -58,7 +118,7 @@ export default function TelaSemana() {
           <button
             type="button"
             aria-label="Próxima semana"
-            onClick={() => setReferencia(somarDias(referencia, 7))}
+            onClick={() => irParaSemana(7)}
             className="flex size-11 items-center justify-center border-0 bg-transparent text-tinta-fraca transition-transform duration-150 active:scale-75"
           >
             <svg
@@ -83,91 +143,186 @@ export default function TelaSemana() {
 
       {dados !== null && (
         <main
-          className={`px-4 pt-1.5 transition-opacity duration-200 ${
+          className={`px-4 pt-2 pb-6 transition-opacity duration-200 ${
             carregando ? "pointer-events-none opacity-40" : "opacity-100"
           }`}
         >
-          {dados.map((faixa, posicao) => {
-            const eHoje = faixa.dia === hoje();
-
-            return (
-              <div
-                key={faixa.dia}
-                style={{ animationDelay: `${posicao * 24}ms` }}
-                className={`entra mb-px flex gap-3 rounded-[10px] px-2 py-2.5 ${
-                  eHoje ? "bg-verde-claro" : ""
-                }`}
-              >
-                <div className="w-9 shrink-0 pt-px text-center">
-                  <div className="font-mono text-[9px] tracking-[0.06em] text-tinta-fraca uppercase">
-                    {rotuloCurto(faixa.dia)}
-                  </div>
-                  <div
-                    className={`mt-px font-mono text-[17px] ${eHoje ? "text-verde" : "text-tinta"}`}
-                  >
-                    {numeroDoDia(faixa.dia)}
-                  </div>
-                </div>
-
-                <div className="flex min-w-0 flex-1 flex-col gap-1">
-                  {faixa.eventos.map((evento) => (
-                    <div
-                      key={evento.id}
-                      className="flex items-center gap-2 rounded-[7px] border border-borda bg-papel px-2.5 py-1"
-                    >
-                      <span className="shrink-0 font-mono text-[10px] text-tinta-fraca">
-                        {evento.horaInicio}
-                      </span>
-                      <span className="min-w-0 flex-1 truncate text-[12.5px]">
-                        {evento.titulo}
-                      </span>
-                    </div>
-                  ))}
-
-                  {faixa.eventos.length === 0 && (
-                    <div className="py-1 text-[12.5px] text-tinta-apagada">Sem compromissos</div>
-                  )}
-
-                  <div className="mt-px flex items-center gap-2.5">
-                    <div className="flex shrink-0 gap-1">
-                      {faixa.habitos.map((habito) => (
-                        <PontoDeHabito key={habito.id} estado={habito.estado} />
-                      ))}
-                    </div>
-                    <span className="font-mono text-[10px] text-tinta-fraca">
-                      {rotuloDeTarefas(faixa.totalTarefas)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+          {dados.map((faixa, posicao) => (
+            <CaixaDoDia
+              key={faixa.dia}
+              faixa={faixa}
+              posicao={posicao}
+              aberta={abertos.has(faixa.dia)}
+              aoAlternarAbertura={() => alternarAbertura(faixa.dia)}
+              aoAlternarTarefa={alternarTarefa}
+            />
+          ))}
         </main>
       )}
     </>
   );
 }
 
-function rotuloDeTarefas(total: number): string {
-  if (total === 0) {
-    return "sem tarefas";
-  }
+function CaixaDoDia({
+  faixa,
+  posicao,
+  aberta,
+  aoAlternarAbertura,
+  aoAlternarTarefa,
+}: {
+  faixa: DiaDaSemana;
+  posicao: number;
+  aberta: boolean;
+  aoAlternarAbertura: () => void;
+  aoAlternarTarefa: (id: string, feita: boolean) => void;
+}) {
+  const ehHoje = faixa.dia === hoje();
+  const pendentes = faixa.tarefas.filter((tarefa) => tarefa.concluidaEm === null).length;
+  const vazio = faixa.eventos.length === 0 && faixa.tarefas.length === 0;
 
-  if (total === 1) {
-    return "1 tarefa";
-  }
+  const ancoradas = faixa.tarefas.filter((tarefa) => tarefa.hora !== null);
+  const semHora = faixa.tarefas.filter((tarefa) => tarefa.hora === null);
 
-  return `${total} tarefas`;
+  return (
+    <div
+      style={{ animationDelay: `${posicao * 24}ms` }}
+      className={`entra mb-1.5 overflow-hidden rounded-xl border transition-colors duration-200 ${
+        ehHoje ? "border-verde bg-verde-claro" : "border-borda bg-papel"
+      }`}
+    >
+      <button
+        type="button"
+        onClick={aoAlternarAbertura}
+        aria-expanded={aberta}
+        className="flex w-full items-center gap-3 border-0 bg-transparent px-3 py-2.5 text-left"
+      >
+        <div className="w-9 shrink-0 text-center">
+          <div className="font-mono text-[9px] tracking-[0.06em] text-tinta-fraca uppercase">
+            {rotuloCurto(faixa.dia)}
+          </div>
+          <div className={`mt-px font-mono text-[17px] ${ehHoje ? "text-verde" : "text-tinta"}`}>
+            {numeroDoDia(faixa.dia)}
+          </div>
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-[13px] text-tinta">{resumo(faixa, pendentes)}</div>
+        </div>
+
+        <span
+          className={`shrink-0 text-tinta-apagada transition-transform duration-200 ease-out ${
+            aberta ? "rotate-90" : ""
+          }`}
+          aria-hidden="true"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M9 6l6 6-6 6" />
+          </svg>
+        </span>
+      </button>
+
+      {aberta && (
+        <div className="entra border-t border-borda-leve px-3 pt-2.5 pb-3">
+          {vazio && <p className="m-0 text-[13px] text-tinta-apagada">Nada neste dia.</p>}
+
+          {faixa.eventos.map((evento) => (
+            <div
+              key={evento.id}
+              className="mb-1.5 flex items-center gap-2.5 rounded-lg border border-borda bg-papel px-2.5 py-1.5"
+            >
+              <span className="shrink-0 font-mono text-[11px] text-tinta-fraca">
+                {evento.horaInicio}
+              </span>
+              <span className="min-w-0 flex-1 truncate text-[13px]">{evento.titulo}</span>
+            </div>
+          ))}
+
+          {ancoradas.map((tarefa) => (
+            <LinhaDeTarefa key={tarefa.id} tarefa={tarefa} aoAlternar={aoAlternarTarefa} />
+          ))}
+
+          {semHora.length > 0 && (
+            <>
+              {(faixa.eventos.length > 0 || ancoradas.length > 0) && (
+                <div className="mt-2.5 mb-1 font-mono text-[9px] tracking-[0.14em] text-tinta-apagada uppercase">
+                  Dia todo
+                </div>
+              )}
+              {semHora.map((tarefa) => (
+                <LinhaDeTarefa key={tarefa.id} tarefa={tarefa} aoAlternar={aoAlternarTarefa} />
+              ))}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
-function PontoDeHabito({ estado }: { estado: EstadoDoHabito }) {
-  if (estado === "feito") {
-    return <span className="block size-2.5 rounded-full bg-verde" />;
+/** A linha única que aparece com o dia fechado. */
+function resumo(faixa: DiaDaSemana, pendentes: number): string {
+  const partes: string[] = [];
+
+  if (faixa.eventos.length === 1) {
+    partes.push("1 compromisso");
+  } else if (faixa.eventos.length > 1) {
+    partes.push(`${faixa.eventos.length} compromissos`);
   }
 
-  if (estado === "falhou") {
-    return <span className="block size-2.5 rounded-full border border-[#d2d4ce]" />;
+  if (pendentes === 1) {
+    partes.push("1 tarefa");
+  } else if (pendentes > 1) {
+    partes.push(`${pendentes} tarefas`);
   }
 
-  return <span className="block size-2.5 rounded-full border border-[#ebebe6]" />;
+  if (partes.length === 0) {
+    const tudoFeito = faixa.tarefas.length > 0;
+
+    return tudoFeito ? "Tudo feito" : "Livre";
+  }
+
+  return partes.join(" · ");
 }
+
+function LinhaDeTarefa({
+  tarefa,
+  aoAlternar,
+}: {
+  tarefa: Tarefa;
+  aoAlternar: (id: string, feita: boolean) => void;
+}) {
+  const feita = tarefa.concluidaEm !== null;
+
+  return (
+    <div className="flex min-h-10 items-center gap-2.5">
+      <CaixaDeMarcar
+        marcada={feita}
+        rotulo={tarefa.titulo}
+        aoAlternar={() => aoAlternar(tarefa.id, !feita)}
+      />
+
+      {tarefa.hora !== null && (
+        <span className="shrink-0 font-mono text-[11px] text-tinta-fraca">{tarefa.hora}</span>
+      )}
+
+      <Link
+        href={`/tarefa/${tarefa.id}`}
+        className={`min-w-0 flex-1 truncate text-[13.5px] no-underline transition-colors duration-200 ${
+          feita ? "text-tinta-apagada line-through" : "text-tinta"
+        }`}
+      >
+        {tarefa.titulo}
+      </Link>
+    </div>
+  );
+}
+
