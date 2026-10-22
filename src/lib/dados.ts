@@ -166,6 +166,19 @@ export function excluirTarefa(id: string): Promise<{ ok: boolean }> {
   return pedir<{ ok: boolean }>(`/tarefas/${id}`, { method: "DELETE" });
 }
 
+/**
+ * Grava a nova ordem da pilha.
+ *
+ * Manda os ids na ordem em que ficaram na tela — o servidor usa a posição
+ * de cada um na lista como valor do campo `ordem`.
+ */
+export function reordenarPilha(ids: string[]): Promise<{ ok: boolean }> {
+  return pedir<{ ok: boolean }>("/tarefas", {
+    method: "PATCH",
+    body: JSON.stringify({ ids }),
+  });
+}
+
 export type NovoEvento = {
   titulo: string;
   dia: DiaTexto;

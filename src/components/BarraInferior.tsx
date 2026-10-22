@@ -33,7 +33,7 @@ export function BarraInferior() {
             key={aba.href}
             href={aba.href}
             aria-current={ativa ? "page" : undefined}
-            className={`flex min-h-11 flex-1 flex-col items-center justify-center gap-1 px-0.5 no-underline ${
+            className={`flex min-h-11 flex-1 flex-col items-center justify-center gap-1 px-0.5 no-underline transition-colors duration-200 active:scale-90 ${
               ativa ? "text-verde" : "text-tinta-fraca"
             }`}
           >

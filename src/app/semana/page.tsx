@@ -39,7 +39,7 @@ export default function TelaSemana() {
             type="button"
             aria-label="Semana anterior"
             onClick={() => setReferencia(somarDias(referencia, -7))}
-            className="flex size-11 items-center justify-center border-0 bg-transparent text-tinta-fraca"
+            className="flex size-11 items-center justify-center border-0 bg-transparent text-tinta-fraca transition-transform duration-150 active:scale-75"
           >
             <svg
               width="18"
@@ -59,7 +59,7 @@ export default function TelaSemana() {
             type="button"
             aria-label="Próxima semana"
             onClick={() => setReferencia(somarDias(referencia, 7))}
-            className="flex size-11 items-center justify-center border-0 bg-transparent text-tinta-fraca"
+            className="flex size-11 items-center justify-center border-0 bg-transparent text-tinta-fraca transition-transform duration-150 active:scale-75"
           >
             <svg
               width="18"
@@ -82,14 +82,19 @@ export default function TelaSemana() {
       {erro !== null && dados === null && <Falhou mensagem={erro} aoTentarDeNovo={recarregar} />}
 
       {dados !== null && (
-        <main className="px-4 pt-1.5">
-          {dados.map((faixa) => {
+        <main
+          className={`px-4 pt-1.5 transition-opacity duration-200 ${
+            carregando ? "pointer-events-none opacity-40" : "opacity-100"
+          }`}
+        >
+          {dados.map((faixa, posicao) => {
             const eHoje = faixa.dia === hoje();
 
             return (
               <div
                 key={faixa.dia}
-                className={`mb-px flex gap-3 rounded-[10px] px-2 py-2.5 ${
+                style={{ animationDelay: `${posicao * 24}ms` }}
+                className={`entra mb-px flex gap-3 rounded-[10px] px-2 py-2.5 ${
                   eHoje ? "bg-verde-claro" : ""
                 }`}
               >

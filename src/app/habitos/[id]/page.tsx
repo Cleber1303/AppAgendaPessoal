@@ -66,13 +66,17 @@ export default function TelaDoHabito() {
       {erro !== null && dados === null && <Falhou mensagem={erro} aoTentarDeNovo={recarregar} />}
 
       {dados !== null && (
-        <main className="px-5 pt-3">
+        <main
+          className={`px-5 pt-3 transition-opacity duration-200 ${
+            carregando ? "opacity-40" : "opacity-100"
+          }`}
+        >
           <div className="flex items-center justify-between">
             <button
               type="button"
               aria-label="Mês anterior"
               onClick={() => setMes(somarMeses(mes, -1))}
-              className="-ml-2 flex size-11 items-center justify-center border-0 bg-transparent text-tinta-fraca"
+              className="-ml-2 flex size-11 items-center justify-center border-0 bg-transparent text-tinta-fraca transition-transform duration-150 active:scale-75"
             >
               <svg
                 width="18"
@@ -96,7 +100,7 @@ export default function TelaDoHabito() {
               aria-label="Próximo mês"
               disabled={!podeAvancar}
               onClick={() => setMes(somarMeses(mes, 1))}
-              className="-mr-2 flex size-11 items-center justify-center border-0 bg-transparent text-tinta-fraca disabled:opacity-25"
+              className="-mr-2 flex size-11 items-center justify-center border-0 bg-transparent text-tinta-fraca transition-transform duration-150 active:scale-75 disabled:opacity-25"
             >
               <svg
                 width="18"
@@ -183,7 +187,7 @@ function Calendario({ dias }: { dias: { dia: DiaTexto; estado: EstadoDoHabito }[
   const vazias = semanaDoPrimeiro === 0 ? 6 : semanaDoPrimeiro - 1;
 
   return (
-    <div className="mt-3.5 rounded-xl border border-borda bg-papel p-3">
+    <div className="entra mt-3.5 rounded-xl border border-borda bg-papel p-3">
       <div className="grid grid-cols-7 gap-1.5">
         {cabecalhoDaSemana.map((nome) => (
           <div

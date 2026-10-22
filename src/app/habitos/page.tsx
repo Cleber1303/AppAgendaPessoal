@@ -91,7 +91,7 @@ function CartaoDeHabito({ habito }: { habito: HabitoComMapa }) {
   return (
     <Link
       href={`/habitos/${habito.id}`}
-      className="mb-3 block rounded-xl border border-borda bg-papel px-3.5 py-3 text-tinta no-underline"
+      className="entra mb-3 block rounded-xl border border-borda bg-papel px-3.5 py-3 text-tinta no-underline transition-transform duration-150 active:scale-[0.99]"
     >
       <div className="flex items-center gap-2.5">
         <span className="min-w-0 flex-1 text-[15.5px] font-medium">{habito.nome}</span>

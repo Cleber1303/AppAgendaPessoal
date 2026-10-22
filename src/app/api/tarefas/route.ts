@@ -92,6 +92,36 @@ export async function GET(requisicao: Request) {
   return NextResponse.json({ erro: "escopo desconhecido" }, { status: 400 });
 }
 
+/**
+ * Grava a nova ordem da pilha.
+ *
+ * Recebe os ids na ordem em que ficaram na tela e escreve a posição de
+ * cada um. Tudo numa transação: ou a pilha inteira muda, ou nada muda —
+ * uma reordenação pela metade deixaria itens empatados na mesma posição.
+ */
+export async function PATCH(requisicao: Request) {
+  const corpo = await requisicao.json();
+  const ids: unknown = corpo.ids;
+
+  if (!Array.isArray(ids) || ids.some((id) => typeof id !== "string")) {
+    return NextResponse.json(
+      { erro: "esperava uma lista de ids" },
+      { status: 400 },
+    );
+  }
+
+  await prisma.$transaction(
+    ids.map((id, posicao) =>
+      prisma.tarefa.update({
+        where: { id: id as string },
+        data: { ordem: posicao },
+      }),
+    ),
+  );
+
+  return NextResponse.json({ ok: true, total: ids.length });
+}
+
 export async function POST(requisicao: Request) {
   const corpo = await requisicao.json();
   const titulo = String(corpo.titulo ?? "").trim();

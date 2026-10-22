@@ -149,6 +149,17 @@ Mover ou cancelar uma ocorrência cria uma **exceção**: uma linha filha com
 série. O banco e a API já fazem isso; a interface de "só esta semana /
 toda a série" ainda não existe.
 
+### A tela responde antes do servidor
+
+Marcar tarefa, marcar hábito e reordenar a pilha mudam a tela na hora e só
+depois mandam a requisição. Se ela falhar, um `recarregar()` traz a verdade
+do servidor de volta.
+
+Esperar a resposta para só então desenhar faz um toque parecer travado
+mesmo com a rede boa — são 200ms de nada acontecendo, e é isso que o
+usuário lê como "app lento". O mesmo vale ao trocar de dia: o conteúdo
+anterior fica na tela, apagado, em vez de sumir e virar "carregando".
+
 ### A faxina roda na abertura
 
 A regra dos 7 dias é executada por `POST /api/manutencao`, chamada pela
@@ -173,8 +184,6 @@ dia, e se não abrir, a regra roda na próxima vez — o resultado é o mesmo.
 - **Contador de atrasadas visível.** Virou uma aba na barra de baixo, sem
   número. Um selo com a contagem seria o próximo passo.
 - **Compromisso de dia inteiro ou de vários dias.**
-- **Arrastar para reordenar a pilha.** A coluna `ordem` existe e o botão
-  "Ordem manual" ordena por ela; falta o arrastar.
 - **Editar evento e hábito.** Dá para criar e excluir, não para editar.
 - **Testes.**
 
@@ -204,6 +213,7 @@ src/app/
   api/                   dia, semana, tarefas, eventos, habitos, manutencao
 src/components/
   BarraInferior.tsx
+  CaixaDeMarcar.tsx      a caixa de marcar animada do app
   Avisos.tsx             carregando, falhou, vazio, ícones
 src/generated/prisma/    cliente gerado — não versionado
 ```

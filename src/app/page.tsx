@@ -5,9 +5,15 @@
 // Apesar do nome, ela mostra qualquer dia da semana corrente — tocar num
 // número da tira de cima troca o dia, e a estrutura é a mesma. É também
 // por aqui que se marca um hábito que você esqueceu ontem.
+//
+// Marcar tarefa e hábito muda a tela ANTES de falar com o servidor. Se a
+// requisição falhar, um recarregar() traz a verdade de volta. Esperar a
+// resposta para só então desenhar faz um toque parecer travado mesmo
+// quando a rede está boa.
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { CaixaDeMarcar } from "@/components/CaixaDeMarcar";
 import { Carregando, Falhou, IconeHistorico, IconeMais } from "@/components/Avisos";
 import {
   alternarHabito,
@@ -25,12 +31,12 @@ import {
   semanaDe,
   type DiaTexto,
 } from "@/lib/datas";
-import type { EstadoDoHabito, HabitoNoDia, Tarefa } from "@/lib/tipos";
+import type { Dia, EstadoDoHabito, HabitoNoDia, Tarefa } from "@/lib/tipos";
 import { usarDados } from "@/lib/usarDados";
 
 export default function TelaHoje() {
   const [diaSelecionado, setDiaSelecionado] = useState<DiaTexto>(hoje());
-  const { dados, carregando, erro, recarregar } = usarDados(
+  const { dados, carregando, erro, recarregar, definirDados } = usarDados(
     () => carregarDia(diaSelecionado),
     [diaSelecionado],
   );
@@ -47,6 +53,45 @@ export default function TelaHoje() {
 
   // Dia no futuro não se marca: o dia ainda não aconteceu.
   const podeMarcarHabito = diaSelecionado <= hoje();
+
+  // Enquanto o próximo dia carrega, o anterior continua na tela, apagado.
+  // Limpar tudo e escrever "carregando" faria a tela piscar a cada toque.
+  const trocandoDeDia = carregando && dados !== null;
+
+  function alternarTarefa(id: string, feita: boolean) {
+    const marca = feita ? new Date().toISOString() : null;
+
+    definirDados((anterior) => {
+      if (anterior === null) {
+        return anterior;
+      }
+
+      const aplicar = (tarefa: Tarefa): Tarefa =>
+        tarefa.id === id ? { ...tarefa, concluidaEm: marca } : tarefa;
+
+      return {
+        ...anterior,
+        ancoradas: anterior.ancoradas.map(aplicar),
+        doDia: anterior.doDia.map(aplicar),
+      };
+    });
+
+    const requisicao = feita ? concluirTarefa(id) : reabrirTarefa(id);
+
+    requisicao.catch(() => {
+      recarregar();
+    });
+  }
+
+  function marcarHabito(id: string) {
+    definirDados((anterior) =>
+      anterior === null ? anterior : alternarHabitoLocal(anterior, id, diaSelecionado),
+    );
+
+    alternarHabito(id, diaSelecionado).catch(() => {
+      recarregar();
+    });
+  }
 
   return (
     <>
@@ -66,7 +111,7 @@ export default function TelaHoje() {
               <button
                 type="button"
                 onClick={() => setDiaSelecionado(hoje())}
-                className="min-h-11 rounded-lg border border-borda bg-papel px-3 text-[13px] font-medium text-verde"
+                className="entra min-h-11 rounded-lg border border-borda bg-papel px-3 text-[13px] font-medium text-verde transition-transform duration-150 active:scale-95"
               >
                 Hoje
               </button>
@@ -74,29 +119,30 @@ export default function TelaHoje() {
             <Link
               href="/historico"
               aria-label="Histórico"
-              className="flex size-11 items-center justify-center text-tinta-apagada no-underline"
+              className="flex size-11 items-center justify-center text-tinta-apagada no-underline transition-transform duration-150 active:scale-90"
             >
               <IconeHistorico />
             </Link>
           </div>
         </div>
 
-        <TiraDaSemana
-          diaSelecionado={diaSelecionado}
-          aoEscolher={setDiaSelecionado}
-        />
+        <TiraDaSemana diaSelecionado={diaSelecionado} aoEscolher={setDiaSelecionado} />
       </header>
 
       {carregando && dados === null && <Carregando />}
       {erro !== null && dados === null && <Falhou mensagem={erro} aoTentarDeNovo={recarregar} />}
 
       {dados !== null && (
-        <main className="px-5">
+        <main
+          className={`px-5 transition-opacity duration-200 ${
+            trocandoDeDia ? "pointer-events-none opacity-40" : "opacity-100"
+          }`}
+        >
           {(dados.eventos.length > 0 || dados.ancoradas.length > 0) && (
             <>
               <Secao>Agenda</Secao>
-              {dados.eventos.map((evento) => (
-                <div key={evento.id} className="flex gap-2.5">
+              {dados.eventos.map((evento, posicao) => (
+                <div key={evento.id} className="entra flex gap-2.5" style={atraso(posicao)}>
                   <div className="w-11 shrink-0 pt-px text-right">
                     <div className="font-mono text-xs">{evento.horaInicio}</div>
                     <div className="font-mono text-[10px] text-tinta-fraca">
@@ -116,8 +162,13 @@ export default function TelaHoje() {
                 </div>
               ))}
 
-              {dados.ancoradas.map((tarefa) => (
-                <TarefaAncorada key={tarefa.id} tarefa={tarefa} aoMudar={recarregar} />
+              {dados.ancoradas.map((tarefa, posicao) => (
+                <TarefaAncorada
+                  key={tarefa.id}
+                  tarefa={tarefa}
+                  posicao={dados.eventos.length + posicao}
+                  aoAlternar={alternarTarefa}
+                />
               ))}
             </>
           )}
@@ -125,8 +176,13 @@ export default function TelaHoje() {
           {dados.doDia.length > 0 && (
             <>
               <Secao>Dia todo</Secao>
-              {dados.doDia.map((tarefa) => (
-                <LinhaDeTarefa key={tarefa.id} tarefa={tarefa} aoMudar={recarregar} />
+              {dados.doDia.map((tarefa, posicao) => (
+                <LinhaDeTarefa
+                  key={tarefa.id}
+                  tarefa={tarefa}
+                  posicao={posicao}
+                  aoAlternar={alternarTarefa}
+                />
               ))}
             </>
           )}
@@ -134,13 +190,14 @@ export default function TelaHoje() {
           {dados.habitos.length > 0 && (
             <>
               <Secao>Hábitos</Secao>
-              {dados.habitos.map((habito) => (
+              {dados.habitos.map((habito, posicao) => (
                 <LinhaDeHabito
                   key={habito.id}
                   habito={habito}
+                  posicao={posicao}
                   diaSelecionado={diaSelecionado}
                   podeMarcar={podeMarcarHabito}
-                  aoMudar={recarregar}
+                  aoMarcar={marcarHabito}
                 />
               ))}
             </>
@@ -150,7 +207,7 @@ export default function TelaHoje() {
             dados.ancoradas.length === 0 &&
             dados.doDia.length === 0 &&
             dados.habitos.length === 0 && (
-              <p className="mt-10 mb-6 text-center text-sm text-tinta-apagada">
+              <p className="entra mt-10 mb-6 text-center text-sm text-tinta-apagada">
                 {ehHoje ? "Nada marcado para hoje." : "Nada marcado para este dia."}
               </p>
             )}
@@ -162,6 +219,44 @@ export default function TelaHoje() {
       <BotaoNovo />
     </>
   );
+}
+
+/** Escalona a entrada dos itens: a lista aparece de cima para baixo. */
+function atraso(posicao: number): React.CSSProperties {
+  return { animationDelay: `${Math.min(posicao, 8) * 28}ms` };
+}
+
+/**
+ * Alterna o hábito localmente, sem ir ao servidor.
+ *
+ * Precisa mexer em dois lugares: o estado do dia na fileira de bolinhas e
+ * o contador da semana. Deixar o contador para a resposta do servidor faz
+ * ele "pular" meio segundo depois do toque.
+ */
+function alternarHabitoLocal(dia: Dia, habitoId: string, diaAlvo: DiaTexto): Dia {
+  return {
+    ...dia,
+    habitos: dia.habitos.map((habito) => {
+      if (habito.id !== habitoId) {
+        return habito;
+      }
+
+      const estavaFeito = habito.semana.some(
+        (entrada) => entrada.dia === diaAlvo && entrada.estado === "feito",
+      );
+
+      const novoEstado: EstadoDoHabito = estavaFeito ? "falhou" : "feito";
+
+      return {
+        ...habito,
+        estado: novoEstado,
+        semana: habito.semana.map((entrada) =>
+          entrada.dia === diaAlvo ? { ...entrada, estado: novoEstado } : entrada,
+        ),
+        feitosNaSemana: habito.feitosNaSemana + (estavaFeito ? -1 : 1),
+      };
+    }),
+  };
 }
 
 function Secao({ children }: { children: React.ReactNode }) {
@@ -209,13 +304,11 @@ function TiraDaSemana({
             onClick={() => aoEscolher(dia)}
             aria-pressed={escolhido}
             aria-label={`${rotuloCurto(dia)} ${numeroDoDia(dia)}`}
-            className={`flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 rounded-[9px] border-0 py-1.5 ${
+            className={`flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 rounded-[9px] border-0 py-1.5 transition-colors duration-200 ease-out active:scale-95 ${
               escolhido ? "bg-verde" : "bg-transparent"
             }`}
           >
-            <span
-              className={`font-mono text-[9px] tracking-[0.06em] uppercase ${corDoRotulo}`}
-            >
+            <span className={`font-mono text-[9px] tracking-[0.06em] uppercase ${corDoRotulo}`}>
               {rotuloCurto(dia)}
             </span>
             <span className={`font-mono text-sm ${corDoNumero}`}>{numeroDoDia(dia)}</span>
@@ -227,28 +320,19 @@ function TiraDaSemana({
 }
 
 /** Tarefa com hora: divide a linha do tempo com os eventos, mas não é um. */
-function TarefaAncorada({ tarefa, aoMudar }: { tarefa: Tarefa; aoMudar: () => void }) {
-  const [salvando, setSalvando] = useState(false);
+function TarefaAncorada({
+  tarefa,
+  posicao,
+  aoAlternar,
+}: {
+  tarefa: Tarefa;
+  posicao: number;
+  aoAlternar: (id: string, feita: boolean) => void;
+}) {
   const feita = tarefa.concluidaEm !== null;
 
-  async function alternar() {
-    setSalvando(true);
-
-    try {
-      if (feita) {
-        await reabrirTarefa(tarefa.id);
-      } else {
-        await concluirTarefa(tarefa.id);
-      }
-
-      aoMudar();
-    } finally {
-      setSalvando(false);
-    }
-  }
-
   return (
-    <div className="flex gap-2.5">
+    <div className="entra flex gap-2.5" style={atraso(posicao)}>
       <div className="w-11 shrink-0 pt-px text-right">
         <div className="font-mono text-xs">{tarefa.hora}</div>
       </div>
@@ -256,17 +340,14 @@ function TarefaAncorada({ tarefa, aoMudar }: { tarefa: Tarefa; aoMudar: () => vo
         <div className="size-2.5 shrink-0 rounded-full border-[1.5px] border-verde bg-fundo" />
       </div>
       <div className="mb-2 flex flex-1 items-center gap-2.5 rounded-[10px] border border-dashed border-[#c9cbc4] bg-papel px-3 py-2">
-        <input
-          type="checkbox"
-          checked={feita}
-          disabled={salvando}
-          onChange={alternar}
-          aria-label={tarefa.titulo}
-          className="size-4 shrink-0 accent-verde"
+        <CaixaDeMarcar
+          marcada={feita}
+          rotulo={tarefa.titulo}
+          aoAlternar={() => aoAlternar(tarefa.id, !feita)}
         />
         <Link
           href={`/tarefa/${tarefa.id}`}
-          className={`flex-1 truncate text-sm no-underline ${
+          className={`flex-1 truncate text-sm no-underline transition-colors duration-200 ${
             feita ? "text-tinta-apagada line-through" : "text-tinta"
           }`}
         >
@@ -278,39 +359,30 @@ function TarefaAncorada({ tarefa, aoMudar }: { tarefa: Tarefa; aoMudar: () => vo
 }
 
 /** Tarefa do dia, sem hora. Fica riscada até o dia virar. */
-function LinhaDeTarefa({ tarefa, aoMudar }: { tarefa: Tarefa; aoMudar: () => void }) {
-  const [salvando, setSalvando] = useState(false);
+function LinhaDeTarefa({
+  tarefa,
+  posicao,
+  aoAlternar,
+}: {
+  tarefa: Tarefa;
+  posicao: number;
+  aoAlternar: (id: string, feita: boolean) => void;
+}) {
   const feita = tarefa.concluidaEm !== null;
 
-  async function alternar() {
-    setSalvando(true);
-
-    try {
-      if (feita) {
-        await reabrirTarefa(tarefa.id);
-      } else {
-        await concluirTarefa(tarefa.id);
-      }
-
-      aoMudar();
-    } finally {
-      setSalvando(false);
-    }
-  }
-
   return (
-    <div className="flex min-h-11 items-center gap-3 border-b border-borda-leve">
-      <input
-        type="checkbox"
-        checked={feita}
-        disabled={salvando}
-        onChange={alternar}
-        aria-label={tarefa.titulo}
-        className="size-4 shrink-0 accent-verde"
+    <div
+      className="entra flex min-h-11 items-center gap-3 border-b border-borda-leve"
+      style={atraso(posicao)}
+    >
+      <CaixaDeMarcar
+        marcada={feita}
+        rotulo={tarefa.titulo}
+        aoAlternar={() => aoAlternar(tarefa.id, !feita)}
       />
       <Link
         href={`/tarefa/${tarefa.id}`}
-        className={`flex-1 truncate text-[15px] no-underline ${
+        className={`flex-1 truncate text-[15px] no-underline transition-colors duration-200 ${
           feita ? "text-tinta-apagada line-through" : "text-tinta"
         }`}
       >
@@ -329,35 +401,25 @@ function LinhaDeTarefa({ tarefa, aoMudar }: { tarefa: Tarefa; aoMudar: () => voi
  */
 function LinhaDeHabito({
   habito,
+  posicao,
   diaSelecionado,
   podeMarcar,
-  aoMudar,
+  aoMarcar,
 }: {
   habito: HabitoNoDia;
+  posicao: number;
   diaSelecionado: DiaTexto;
   podeMarcar: boolean;
-  aoMudar: () => void;
+  aoMarcar: (id: string) => void;
 }) {
-  const [salvando, setSalvando] = useState(false);
   const temDiasFixos = habito.diasDaSemana.length > 0;
 
-  async function marcar() {
-    setSalvando(true);
-
-    try {
-      await alternarHabito(habito.id, diaSelecionado);
-      aoMudar();
-    } finally {
-      setSalvando(false);
-    }
-  }
-
   return (
-    <div className="flex min-h-10 items-center gap-2.5">
-      <Link
-        href={`/habitos/${habito.id}`}
-        className="min-w-0 flex-1 text-tinta no-underline"
-      >
+    <div
+      className="entra flex min-h-10 items-center gap-2.5"
+      style={atraso(posicao)}
+    >
+      <Link href={`/habitos/${habito.id}`} className="min-w-0 flex-1 text-tinta no-underline">
         <div className="text-sm">{habito.nome}</div>
         {temDiasFixos && (
           <div className="mt-px font-mono text-[10px] text-tinta-apagada">
@@ -377,11 +439,10 @@ function LinhaDeHabito({
               <button
                 key={entrada.dia}
                 type="button"
-                onClick={marcar}
-                disabled={salvando}
+                onClick={() => aoMarcar(habito.id)}
                 aria-label={`Marcar ${habito.nome} em ${entrada.dia}`}
                 aria-pressed={entrada.estado === "feito"}
-                className={`size-3.5 rounded-full border-2 border-verde ${
+                className={`size-3.5 rounded-full border-2 border-verde transition-all duration-200 ease-out active:scale-75 ${
                   entrada.estado === "feito" ? "bg-verde" : "bg-transparent"
                 }`}
               />
@@ -403,7 +464,7 @@ function Bolinha({ estado, destacada }: { estado: EstadoDoHabito; destacada: boo
   if (estado === "feito") {
     return (
       <span
-        className={`block size-3.5 rounded-full bg-verde ${
+        className={`block size-3.5 rounded-full bg-verde transition-all duration-200 ${
           destacada ? "ring-2 ring-verde ring-offset-1" : ""
         }`}
       />
@@ -425,7 +486,7 @@ function BotaoNovo() {
       aria-label="Novo item"
       className="pointer-events-none fixed bottom-24 left-1/2 flex w-full max-w-md -translate-x-1/2 justify-end pr-5 no-underline"
     >
-      <span className="pointer-events-auto flex size-14 items-center justify-center rounded-full bg-verde text-white shadow-[0_5px_14px_rgba(20,22,25,0.2)]">
+      <span className="pointer-events-auto flex size-14 items-center justify-center rounded-full bg-verde text-white shadow-[0_5px_14px_rgba(20,22,25,0.2)] transition-transform duration-150 active:scale-90">
         <IconeMais />
       </span>
     </Link>

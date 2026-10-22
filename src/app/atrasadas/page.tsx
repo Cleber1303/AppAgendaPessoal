@@ -42,8 +42,8 @@ export default function TelaAtrasadas() {
         <main className="px-5 pt-3">
           {dados.length === 0 && <Vazio texto="Nada atrasado. Bom sinal." />}
 
-          {dados.map((tarefa) => (
-            <LinhaAtrasada key={tarefa.id} tarefa={tarefa} />
+          {dados.map((tarefa, posicao) => (
+            <LinhaAtrasada key={tarefa.id} tarefa={tarefa} posicao={posicao} />
           ))}
 
           {dados.length > 0 && (
@@ -64,7 +64,13 @@ export default function TelaAtrasadas() {
   );
 }
 
-function LinhaAtrasada({ tarefa }: { tarefa: TarefaAtrasada }) {
+function LinhaAtrasada({
+  tarefa,
+  posicao,
+}: {
+  tarefa: TarefaAtrasada;
+  posicao: number;
+}) {
   const perto = tarefa.diasParaExpirar <= 2;
 
   let aviso = `sai em ${tarefa.diasParaExpirar} dias`;
@@ -78,7 +84,8 @@ function LinhaAtrasada({ tarefa }: { tarefa: TarefaAtrasada }) {
   return (
     <Link
       href={`/tarefa/${tarefa.id}`}
-      className={`mb-2 flex min-h-16 items-center gap-3 rounded-[11px] border bg-papel px-3.5 py-2.5 text-tinta no-underline ${
+      style={{ animationDelay: `${Math.min(posicao, 8) * 28}ms` }}
+      className={`entra mb-2 flex min-h-16 items-center gap-3 rounded-[11px] border bg-papel px-3.5 py-2.5 text-tinta no-underline transition-transform duration-150 active:scale-[0.99] ${
         perto ? "border-ambar-borda" : "border-borda"
       }`}
     >

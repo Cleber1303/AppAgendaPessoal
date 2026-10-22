@@ -7,14 +7,22 @@ type Estado<T> = {
   carregando: boolean;
   erro: string | null;
   recarregar: () => void;
+  /**
+   * Altera os dados localmente, sem ir ao servidor.
+   *
+   * É o que permite a tela responder na hora: marca a tarefa, desenha o
+   * resultado e só então manda a requisição. Se ela falhar, um
+   * `recarregar()` traz a verdade do servidor de volta.
+   */
+  definirDados: (transformar: (anterior: T | null) => T | null) => void;
 };
 
 /**
  * Carrega algo da camada de dados e devolve o estado da tela.
  *
- * Simples de propósito: não há cache aqui. O cache de verdade é o banco
- * local do navegador, que entra dentro de `dados.ts` quando chegarmos no
- * offline — e aí este hook continua igual.
+ * Os dados anteriores continuam na tela enquanto a próxima busca acontece.
+ * Limpar e mostrar "carregando" a cada troca de dia faria a tela piscar a
+ * cada toque — o que o usuário lê como lentidão, mesmo sendo rápido.
  */
 export function usarDados<T>(buscar: () => Promise<T>, dependencias: unknown[] = []): Estado<T> {
   const [dados, setDados] = useState<T | null>(null);
@@ -25,6 +33,13 @@ export function usarDados<T>(buscar: () => Promise<T>, dependencias: unknown[] =
   const recarregar = useCallback(() => {
     setTentativa((anterior) => anterior + 1);
   }, []);
+
+  const definirDados = useCallback(
+    (transformar: (anterior: T | null) => T | null) => {
+      setDados((anterior) => transformar(anterior));
+    },
+    [],
+  );
 
   useEffect(() => {
     let cancelado = false;
@@ -57,5 +72,5 @@ export function usarDados<T>(buscar: () => Promise<T>, dependencias: unknown[] =
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tentativa, ...dependencias]);
 
-  return { dados, carregando, erro, recarregar };
+  return { dados, carregando, erro, recarregar, definirDados };
 }

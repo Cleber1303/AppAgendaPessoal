@@ -75,10 +75,11 @@ export default function TelaHistorico() {
                 {grupo.rotulo}
               </div>
 
-              {grupo.itens.map((item) => (
+              {grupo.itens.map((item, posicao) => (
                 <div
                   key={item.id}
-                  className="flex min-h-12 items-center gap-3 border-b border-borda-leve"
+                  style={{ animationDelay: `${Math.min(posicao, 8) * 22}ms` }}
+                  className="entra flex min-h-12 items-center gap-3 border-b border-borda-leve"
                 >
                   <Marca feita={item.feita} />
                   <span
