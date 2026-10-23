@@ -17,7 +17,9 @@ export function BarraInferior() {
   // A tela de detalhe da tarefa é um formulário: a barra sai do caminho
   // para não oferecer fuga no meio dele. Criar item virou pop-up, então
   // não precisa mais estar nesta lista.
-  if (caminho.startsWith("/tarefa")) {
+  //
+  // Na tela de senha não há app para navegar ainda.
+  if (caminho.startsWith("/tarefa") || caminho.startsWith("/entrar")) {
     return null;
   }
 

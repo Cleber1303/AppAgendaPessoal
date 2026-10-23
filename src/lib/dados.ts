@@ -47,6 +47,14 @@ async function pedir<T>(caminho: string, opcoes?: RequestInit): Promise<T> {
   });
 
   if (!resposta.ok) {
+    // Sessão expirada: volta para a tela de senha em vez de mostrar um
+    // erro que a pessoa não tem como resolver olhando.
+    if (resposta.status === 401) {
+      window.location.href = "/entrar";
+
+      throw new ErroDeDados("sessão expirada");
+    }
+
     const corpo = await resposta.json().catch(() => ({}));
 
     if (corpo.erro) {

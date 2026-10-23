@@ -160,6 +160,26 @@ mesmo com a rede boa — são 200ms de nada acontecendo, e é isso que o
 usuário lê como "app lento". O mesmo vale ao trocar de dia: o conteúdo
 anterior fica na tela, apagado, em vez de sumir e virar "carregando".
 
+### A tranca é uma senha só
+
+Sem usuário, sem cadastro: um app de uma pessoa. A senha vive em
+`AGENDA_SENHA` e nunca chega ao navegador — o que vai no cookie é uma
+validade assinada com HMAC. Um cookie inventado à mão não entra, e mudar
+a data dentro dele invalida a assinatura.
+
+O `src/middleware.ts` protege as telas **e as rotas de API**. Trancar só
+as telas não protegeria nada: os dados saem por `/api/tarefas` do mesmo
+jeito.
+
+**Sem `AGENDA_SENHA` definida, o app tranca em produção** em vez de
+liberar. Uma variável esquecida no deploy não pode virar um app aberto
+sem ninguém perceber. Em desenvolvimento ele deixa passar, para não
+atrapalhar.
+
+O que protege de verdade contra tentativa em massa é o tamanho da senha:
+não há onde contar tentativas aqui, só um atraso fixo de meio segundo a
+cada erro. Use uma frase, não uma palavra.
+
 ### A faxina roda na abertura
 
 A regra dos 7 dias é executada por `POST /api/manutencao`, chamada pela
@@ -170,11 +190,10 @@ dia, e se não abrir, a regra roda na próxima vez — o resultado é o mesmo.
 
 ## O que ainda não existe
 
-- **Autenticação.** Qualquer um com o endereço lê e escreve. Antes de
-  publicar num domínio público, ponha um provider OAuth com allowlist de
-  um e-mail só.
 - **Funcionar sem internet.** A arquitetura está pronta, a implementação
-  não. `dados.ts` é o arquivo a mexer.
+  não. `dados.ts` é o arquivo a mexer. Atenção: a tranca por senha usa
+  middleware, que roda antes do seu código — quando o offline chegar, ela
+  vai precisar de ajuste para não bloquear as telas já carregadas.
 - **Notificações.** A web não sabe agendar notificação local — a API que
   faria isso foi descontinuada. Saída mais barata: exportar `.ics` e
   deixar o calendário do celular avisar.
@@ -203,8 +222,12 @@ src/lib/
   dados.ts               ÚNICO ponto de rede do app
   usarDados.ts           o hook que as telas usam
   atualizacao.ts         o aviso de "algo mudou, recarregue"
+  repeticao.ts           a regra de repetição e a tradução para iCalendar
+  sessao.ts              o cookie assinado da senha
   prisma.ts              a conexão
+src/middleware.ts        a tranca: nenhuma tela ou API sem sessão
 src/app/
+  entrar/                a tela de senha
   page.tsx               Hoje — e qualquer dia da semana corrente
   semana/                dias retráteis, com eventos e tarefas
   pilha/ atrasadas/ historico/

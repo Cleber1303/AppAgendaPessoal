@@ -59,8 +59,8 @@ export function NovoItem() {
   const [diasFixos, setDiasFixos] = useState<number[]>([]);
 
   // A tela de detalhe da tarefa já é um formulário; um "+" flutuando por
-  // cima dela só atrapalha.
-  const escondido = caminho.startsWith("/tarefa");
+  // cima dela só atrapalha. Na tela de senha, nem app existe ainda.
+  const escondido = caminho.startsWith("/tarefa") || caminho.startsWith("/entrar");
 
   useEffect(() => {
     const elemento = dialogo.current;

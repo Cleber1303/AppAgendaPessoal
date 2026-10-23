@@ -47,6 +47,24 @@ body {
 }
 
 /*
+ * O anel de foco.
+ *
+ * O padrão do navegador é um contorno preto grosso que destoa de tudo.
+ * Trocado por verde — não apagado: sem anel nenhum, quem navega por
+ * teclado perde a única pista de onde está.
+ *
+ * `focus-visible` em vez de `focus` para o anel não aparecer a cada
+ * toque no celular, só quando a navegação é por teclado.
+ */
+input:focus-visible,
+button:focus-visible,
+a:focus-visible,
+[role="checkbox"]:focus-visible {
+  outline: 2px solid var(--color-verde);
+  outline-offset: 2px;
+}
+
+/*
  * Entrada de conteúdo.
  *
  * Um deslocamento pequeno (6px) e rápido (260ms). Animação de entrada boa
