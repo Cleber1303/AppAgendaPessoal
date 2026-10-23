@@ -41,6 +41,64 @@ export function repeticaoParaRrule(repeticao: Repeticao): string | null {
   return `FREQ=MONTHLY;BYMONTHDAY=${dias.join(",")}`;
 }
 
+/**
+ * O caminho inverso: a RRULE guardada volta para a forma da interface.
+ *
+ * Só entende o que esta tela sabe gerar — semanal por dia da semana e
+ * mensal por dia do mês. Qualquer outra regra vira "não repete" em vez
+ * de quebrar a tela, e salvar por cima a substitui. Se um dia o app
+ * importar .ics de fora, é aqui que vai doer.
+ */
+export function deRrule(texto: string | null): Repeticao {
+  if (texto === null || texto === "") {
+    return SEM_REPETICAO;
+  }
+
+  const partes = new Map<string, string>();
+
+  for (const pedaco of texto.split(";")) {
+    const igual = pedaco.indexOf("=");
+
+    if (igual > 0) {
+      partes.set(pedaco.slice(0, igual).toUpperCase(), pedaco.slice(igual + 1));
+    }
+  }
+
+  const frequencia = partes.get("FREQ");
+
+  if (frequencia === "WEEKLY") {
+    const porDia = partes.get("BYDAY");
+
+    if (porDia === undefined || porDia === "") {
+      return SEM_REPETICAO;
+    }
+
+    const dias = porDia
+      .split(",")
+      .map((sigla) => siglasDaSemana.indexOf(sigla.trim().toUpperCase()))
+      .filter((indice) => indice >= 0);
+
+    return dias.length === 0 ? SEM_REPETICAO : { tipo: "semanal", dias };
+  }
+
+  if (frequencia === "MONTHLY") {
+    const porDiaDoMes = partes.get("BYMONTHDAY");
+
+    if (porDiaDoMes === undefined || porDiaDoMes === "") {
+      return SEM_REPETICAO;
+    }
+
+    const dias = porDiaDoMes
+      .split(",")
+      .map((numero) => Number(numero.trim()))
+      .filter((numero) => Number.isInteger(numero) && numero >= 1 && numero <= 31);
+
+    return dias.length === 0 ? SEM_REPETICAO : { tipo: "mensal", dias };
+  }
+
+  return SEM_REPETICAO;
+}
+
 /** O texto que aparece na linha fechada. */
 export function descreverRepeticao(repeticao: Repeticao): string {
   if (repeticao.tipo === "nao") {

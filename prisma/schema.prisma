@@ -112,10 +112,32 @@ model Habito {
   diasDaSemana  Int[] @default([])
 
   registros RegistroHabito[]
+  pausas    PausaDoHabito[]
 
   criadoEm     DateTime  @default(now())
   atualizadoEm DateTime  @updatedAt
   deletadoEm   DateTime?
+}
+
+/// Um período em que o hábito ficou pausado.
+///
+/// Sem isto, pausar não serviria para nada: os dias parados continuariam
+/// contando como falha e quebrariam a sequência do mesmo jeito — que é
+/// exatamente o que se quer evitar ao parar a academia por dois meses.
+///
+/// `fim` nulo significa pausa em andamento.
+model PausaDoHabito {
+  id String @id @default(uuid()) @db.Uuid
+
+  habitoId String @db.Uuid
+  habito   Habito @relation(fields: [habitoId], references: [id], onDelete: Cascade)
+
+  inicio DateTime  @db.Date
+  fim    DateTime? @db.Date
+
+  criadoEm DateTime @default(now())
+
+  @@index([habitoId])
 }
 
 model RegistroHabito {

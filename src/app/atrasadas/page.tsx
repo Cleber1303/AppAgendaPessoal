@@ -7,6 +7,7 @@
 
 import Link from "next/link";
 import { Carregando, Falhou, IconeHistorico, IconeSeta, Vazio } from "@/components/Avisos";
+import { usarEdicao } from "@/components/Edicao";
 import { carregarAtrasadas } from "@/lib/dados";
 import { diaBarraMes } from "@/lib/datas";
 import type { TarefaAtrasada } from "@/lib/tipos";
@@ -55,6 +56,7 @@ function LinhaAtrasada({
   tarefa: TarefaAtrasada;
   posicao: number;
 }) {
+  const { abrirTarefa } = usarEdicao();
   const perto = tarefa.diasParaExpirar <= 2;
 
   let aviso = `sai em ${tarefa.diasParaExpirar} dias`;
@@ -66,10 +68,11 @@ function LinhaAtrasada({
   }
 
   return (
-    <Link
-      href={`/tarefa/${tarefa.id}`}
+    <button
+      type="button"
+      onClick={() => abrirTarefa(tarefa.id)}
       style={{ animationDelay: `${Math.min(posicao, 8) * 28}ms` }}
-      className={`entra mb-2 flex min-h-16 items-center gap-3 rounded-[11px] border bg-papel px-3.5 py-2.5 text-tinta no-underline transition-transform duration-150 active:scale-[0.99] ${
+      className={`entra mb-2 flex min-h-16 w-full items-center gap-3 rounded-[11px] border bg-papel px-3.5 py-2.5 text-left text-tinta transition-transform duration-150 active:scale-[0.99] ${
         perto ? "border-ambar-borda" : "border-borda"
       }`}
     >
@@ -87,6 +90,6 @@ function LinhaAtrasada({
       <span className="shrink-0 text-tinta-apagada">
         <IconeSeta />
       </span>
-    </Link>
+    </button>
   );
 }

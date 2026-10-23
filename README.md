@@ -62,6 +62,7 @@ Início". O `manifest.json` já está lá, então abre sem barra de navegador.
 | `Tarefa` | Tem estado (feita / não feita), não ocupa tempo |
 | `Habito` | Definição: nome, mais meta semanal **ou** dias fixos |
 | `RegistroHabito` | Uma linha por dia marcado |
+| `PausaDoHabito` | Um período parado; dia pausado não conta como falha |
 
 ### O tipo da tarefa não é um campo
 
@@ -160,6 +161,21 @@ mesmo com a rede boa — são 200ms de nada acontecendo, e é isso que o
 usuário lê como "app lento". O mesmo vale ao trocar de dia: o conteúdo
 anterior fica na tela, apagado, em vez de sumir e virar "carregando".
 
+### Pausar um hábito não quebra a sequência
+
+Parar a academia por dois meses não pode custar o histórico. Por isso
+existe a tabela `PausaDoHabito`: cada período parado vira uma linha, e
+dia dentro de uma pausa é **pulado** no cálculo da sequência — não conta
+como feito nem como falha.
+
+Guardar só um `ativo: true/false` não bastaria: ele diz o estado de
+agora, e a sequência olha para trás. Sem saber *quando* você estava
+parado, os dias parados voltariam a contar como falha assim que você
+retomasse, que é exatamente o problema que pausar deveria resolver.
+
+Pausa aberta e fechada no mesmo dia é apagada em vez de guardada, para
+não encher o banco de pausas de zero dia.
+
 ### A tranca é uma senha só
 
 Sem usuário, sem cadastro: um app de uma pessoa. A senha vive em
@@ -190,6 +206,43 @@ dia, e se não abrir, a regra roda na próxima vez — o resultado é o mesmo.
 
 ## O que ainda não existe
 
+Levantado varrendo o código em 23/10/2026: quais operações a API oferece,
+quais têm botão, e quais campos do banco nenhuma tela preenche.
+
+### Buracos — coisa que você vai esbarrar usando
+
+- **Título de tarefa não se edita.** A API aceita (`PATCH` com `titulo`),
+  a tela só exibe.
+- **Nome e meta do hábito não se editam.** A rota aceita; falta a tela.
+- **Busca só no histórico**, e filtrando no cliente.
+- **Editar evento recorrente muda a série inteira.** Dá para APAGAR só
+  uma ocorrência, mas não para mover só uma. O banco já guarda a exceção
+  (`eventoPaiId`, `dataOriginal`); falta estender a edição.
+- **Campos que o banco tem e nenhuma tela preenche:** `nota` (tarefa e
+  evento), `cor` do evento, `icone` do hábito.
+- **`deRrule` só entende o que a tela gera.** Uma regra vinda de fora
+  (`FREQ=DAILY`, "toda segunda terça-feira do mês") é lida como "não
+  repete", e salvar por cima a substitui. Só vira problema se um dia o
+  app importar `.ics`.
+
+### Fragilidades — não incomodam hoje, incomodam depois
+
+- **Nenhum backup.** Se o Neon sumir, sumiu. **Export `.ics` e `.json` é
+  o item mais importante desta lista inteira**, e é pequeno.
+- **`AGENDA_FUSO` só vale no servidor.** As telas são componentes de
+  cliente e `process.env` não chega ao navegador sem o prefixo
+  `NEXT_PUBLIC_`. Hoje não dá problema porque o padrão no código é o
+  mesmo valor; mudar a variável criaria uma diferença silenciosa entre
+  o que o servidor calcula e o que a tela desenha.
+- **`expandirEventos` lê todos os eventos a cada requisição**, sem filtro
+  de data — porque um evento recorrente antigo pode gerar ocorrência
+  hoje. Com dezenas de eventos é irrelevante; com milhares, não.
+- **Sem testes.** Tudo foi verificado à mão, rodando.
+- **Sem registro de erro.** Uma falha em produção só aparece se você
+  estiver olhando os logs da Vercel na hora.
+
+### Decisões adiadas de propósito
+
 - **Funcionar sem internet.** A arquitetura está pronta, a implementação
   não. `dados.ts` é o arquivo a mexer. Atenção: a tranca por senha usa
   middleware, que roda antes do seu código — quando o offline chegar, ela
@@ -197,14 +250,11 @@ dia, e se não abrir, a regra roda na próxima vez — o resultado é o mesmo.
 - **Notificações.** A web não sabe agendar notificação local — a API que
   faria isso foi descontinuada. Saída mais barata: exportar `.ics` e
   deixar o calendário do celular avisar.
-- **Export `.ics` / `.json`.** É o que te protege se a hospedagem cair,
-  e vale fazer antes do resto.
-- **Busca global.** Só o histórico tem busca, e ela filtra no cliente.
-- **Contador de atrasadas visível.** Virou uma aba na barra de baixo, sem
-  número. Um selo com a contagem seria o próximo passo.
+- **"Só esta semana" ou "toda a série"** ao mexer num evento recorrente.
+  O banco já guarda a exceção (`eventoPaiId`, `dataOriginal`); falta a
+  interface.
 - **Compromisso de dia inteiro ou de vários dias.**
-- **Editar evento e hábito.** Dá para criar e excluir, não para editar.
-- **Testes.**
+- **Contador de atrasadas visível.** Virou aba sem número.
 
 ---
 
@@ -232,7 +282,8 @@ src/app/
   semana/                dias retráteis, com eventos e tarefas
   pilha/ atrasadas/ historico/
   habitos/               lista
-  habitos/[id]/          histórico mês a mês de um hábito
+  habitos/[id]/          calendário do mês: marcar, pausar, apagar
+  evento/[id]/           editar e apagar evento
   tarefa/[id]/           detalhe e adiamento
   api/                   dia, semana, tarefas, eventos, habitos, manutencao
 src/components/

@@ -7,6 +7,7 @@ import type {
   EstadoDoHabito,
   Habito as HabitoDeTela,
   HabitoNoDia,
+  Pausa,
   Tarefa as TarefaDeTela,
   TipoDeTarefa,
 } from "./tipos";
@@ -56,7 +57,29 @@ type LinhaDeHabito = {
   metaPorSemana: number | null;
   diasDaSemana: number[];
   ordem: number;
+  ativo: boolean;
 };
+
+/** Converte as linhas de pausa do banco para o formato das telas. */
+export function pausasParaTela(
+  linhas: { inicio: Date; fim: Date | null }[],
+): Pausa[] {
+  return linhas.map((linha) => ({
+    inicio: dataParaDia(linha.inicio),
+    fim: linha.fim === null ? null : dataParaDia(linha.fim),
+  }));
+}
+
+/** Verdadeiro se o dia cai dentro de alguma pausa. */
+export function diaPausado(dia: DiaTexto, pausas: Pausa[]): boolean {
+  return pausas.some((pausa) => {
+    if (dia < pausa.inicio) {
+      return false;
+    }
+
+    return pausa.fim === null || dia <= pausa.fim;
+  });
+}
 
 /**
  * O tipo da tarefa sai da combinação de data e hora. Está aqui, num lugar
@@ -97,6 +120,7 @@ export function habitoParaTela(linha: LinhaDeHabito): HabitoDeTela {
     metaPorSemana: linha.metaPorSemana,
     diasDaSemana: linha.diasDaSemana,
     ordem: linha.ordem,
+    ativo: linha.ativo,
   };
 }
 
@@ -233,7 +257,9 @@ export function estadoDoHabito(
   habito: LinhaDeHabito,
   dia: DiaTexto,
   diasMarcados: Set<DiaTexto>,
+  pausas: Pausa[] = [],
 ): EstadoDoHabito {
+  // Marcação vence pausa: se você foi à academia durante a pausa, foi.
   if (diasMarcados.has(dia)) {
     return "feito";
   }
@@ -248,6 +274,10 @@ export function estadoDoHabito(
     return "futuro";
   }
 
+  if (diaPausado(dia, pausas)) {
+    return "pausado";
+  }
+
   return "falhou";
 }
 
@@ -256,11 +286,12 @@ export function habitoNoDia(
   habito: LinhaDeHabito,
   dia: DiaTexto,
   diasMarcados: Set<DiaTexto>,
+  pausas: Pausa[] = [],
 ): HabitoNoDia {
   const dias = semanaDe(dia);
   const semana = dias.map((cadaDia) => ({
     dia: cadaDia,
-    estado: estadoDoHabito(habito, cadaDia, diasMarcados),
+    estado: estadoDoHabito(habito, cadaDia, diasMarcados, pausas),
   }));
 
   const feitosNaSemana = semana.filter((entrada) => entrada.estado === "feito").length;
@@ -276,15 +307,25 @@ export function habitoNoDia(
 
   return {
     ...habitoParaTela(habito),
-    estado: estadoDoHabito(habito, dia, diasMarcados),
+    estado: estadoDoHabito(habito, dia, diasMarcados, pausas),
     semana,
     feitosNaSemana,
     alvoNaSemana,
   };
 }
 
-/** Quantos dias de sequência cumprida, contando só dias programados. */
-export function serieDoHabito(habito: LinhaDeHabito, diasMarcados: Set<DiaTexto>): number {
+/**
+ * Quantos dias de sequência cumprida, contando só dias programados.
+ *
+ * Dia dentro de uma pausa é pulado, não quebra e nem soma: é esse o
+ * sentido de pausar. Dois meses parado deixam a sequência onde estava,
+ * em vez de zerá-la.
+ */
+export function serieDoHabito(
+  habito: LinhaDeHabito,
+  diasMarcados: Set<DiaTexto>,
+  pausas: Pausa[] = [],
+): number {
   const temDiasFixos = habito.diasDaSemana.length > 0;
   let dia = hoje();
   let serie = 0;
@@ -297,7 +338,7 @@ export function serieDoHabito(habito: LinhaDeHabito, diasMarcados: Set<DiaTexto>
 
     const eraDia = !temDiasFixos || habito.diasDaSemana.includes(diaDaSemana(dia));
 
-    if (eraDia) {
+    if (eraDia && !diaPausado(dia, pausas)) {
       if (diasMarcados.has(dia)) {
         serie = serie + 1;
       } else if (dia !== hoje()) {

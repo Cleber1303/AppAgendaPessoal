@@ -24,6 +24,7 @@ import type {
   Habito,
   ItemDaPilha,
   ItemDoHistorico,
+  Pausa,
   Tarefa,
   TarefaAtrasada,
 } from "./tipos";
@@ -116,6 +117,7 @@ export type MesDoHabito = {
   habito: Habito;
   mes: string;
   dias: { dia: DiaTexto; estado: EstadoDoHabito }[];
+  pausas: Pausa[];
   feitos: number;
   programados: number;
   serie: number;
@@ -170,6 +172,16 @@ export function adiarTarefa(
   });
 }
 
+export function editarTarefa(
+  id: string,
+  mudanca: { titulo?: string; nota?: string | null },
+): Promise<Tarefa> {
+  return pedir<Tarefa>(`/tarefas/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(mudanca),
+  });
+}
+
 export function excluirTarefa(id: string): Promise<{ ok: boolean }> {
   return pedir<{ ok: boolean }>(`/tarefas/${id}`, { method: "DELETE" });
 }
@@ -205,6 +217,51 @@ export function criarEvento(novo: NovoEvento): Promise<{ id: string }> {
   });
 }
 
+/** Um evento como ele está guardado — a série, não uma ocorrência. */
+export type EventoGuardado = {
+  id: string;
+  titulo: string;
+  nota: string | null;
+  local: string | null;
+  cor: string;
+  dia: DiaTexto;
+  horaInicio: string;
+  horaFim: string;
+  duracao: string;
+  fusoHorario: string;
+  rrule: string | null;
+};
+
+export function carregarEvento(id: string): Promise<EventoGuardado> {
+  return pedir<EventoGuardado>(`/eventos/${id}`);
+}
+
+export function editarEvento(
+  id: string,
+  mudanca: Partial<NovoEvento>,
+): Promise<{ id: string }> {
+  return pedir<{ id: string }>(`/eventos/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(mudanca),
+  });
+}
+
+/**
+ * Apaga a série inteira, ou só a ocorrência de um dia.
+ *
+ * Apagar uma ocorrência grava uma exceção cancelada: a regra continua
+ * valendo em todos os outros dias.
+ */
+export function excluirEvento(
+  id: string,
+  escopo: "serie" | "ocorrencia",
+  dia?: DiaTexto,
+): Promise<{ ok: boolean }> {
+  const parametros = escopo === "ocorrencia" && dia ? `?escopo=ocorrencia&dia=${dia}` : "";
+
+  return pedir<{ ok: boolean }>(`/eventos/${id}${parametros}`, { method: "DELETE" });
+}
+
 export type NovoHabito = {
   nome: string;
   /** Um OU outro, nunca os dois. */
@@ -217,6 +274,26 @@ export function criarHabito(novo: NovoHabito): Promise<Habito> {
     method: "POST",
     body: JSON.stringify(novo),
   });
+}
+
+export type MudancaNoHabito = {
+  nome?: string;
+  ativo?: boolean;
+  /** Vazio volta para meta semanal; preenchido troca para dias fixos. */
+  diasDaSemana?: number[];
+  metaPorSemana?: number;
+};
+
+export function editarHabito(id: string, mudanca: MudancaNoHabito): Promise<Habito> {
+  return pedir<Habito>(`/habitos/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(mudanca),
+  });
+}
+
+/** O hábito some das telas; o histórico continua no banco. */
+export function excluirHabito(id: string): Promise<{ ok: boolean }> {
+  return pedir<{ ok: boolean }>(`/habitos/${id}`, { method: "DELETE" });
 }
 
 /** Marca ou desmarca — a mesma chamada serve para os dois. */

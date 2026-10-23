@@ -14,6 +14,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { CaixaDeMarcar } from "@/components/CaixaDeMarcar";
+import { usarEdicao } from "@/components/Edicao";
 import { Carregando, Falhou, IconeHistorico } from "@/components/Avisos";
 import {
   alternarHabito,
@@ -35,6 +36,7 @@ import type { Dia, EstadoDoHabito, HabitoNoDia, Tarefa } from "@/lib/tipos";
 import { usarDados } from "@/lib/usarDados";
 
 export default function TelaHoje() {
+  const { abrirEvento } = usarEdicao();
   const [diaSelecionado, setDiaSelecionado] = useState<DiaTexto>(hoje());
   const { dados, carregando, erro, recarregar, definirDados } = usarDados(
     () => carregarDia(diaSelecionado),
@@ -153,12 +155,16 @@ export default function TelaHoje() {
                     <div className="size-2.5 shrink-0 rounded-full bg-verde" />
                     <div className="mt-1 w-px flex-1 bg-borda" />
                   </div>
-                  <div className="mb-2 flex-1 rounded-[10px] border border-borda bg-papel px-3 py-2">
+                  <button
+                    type="button"
+                    onClick={() => abrirEvento(evento.serieId, evento.dia)}
+                    className="mb-2 flex-1 rounded-[10px] border border-borda bg-papel px-3 py-2 text-left text-tinta transition-transform duration-150 active:scale-[0.99]"
+                  >
                     <div className="text-sm font-medium">{evento.titulo}</div>
                     {evento.local !== null && (
                       <div className="mt-px text-xs text-tinta-fraca">{evento.local}</div>
                     )}
-                  </div>
+                  </button>
                 </div>
               ))}
 
@@ -327,6 +333,7 @@ function TarefaAncorada({
   posicao: number;
   aoAlternar: (id: string, feita: boolean) => void;
 }) {
+  const { abrirTarefa } = usarEdicao();
   const feita = tarefa.concluidaEm !== null;
 
   return (
@@ -343,14 +350,15 @@ function TarefaAncorada({
           rotulo={tarefa.titulo}
           aoAlternar={() => aoAlternar(tarefa.id, !feita)}
         />
-        <Link
-          href={`/tarefa/${tarefa.id}`}
-          className={`flex-1 truncate text-sm no-underline transition-colors duration-200 ${
+        <button
+          type="button"
+          onClick={() => abrirTarefa(tarefa.id)}
+          className={`flex-1 truncate border-0 bg-transparent text-left text-sm transition-colors duration-200 ${
             feita ? "text-tinta-apagada line-through" : "text-tinta"
           }`}
         >
           {tarefa.titulo}
-        </Link>
+        </button>
       </div>
     </div>
   );
@@ -366,6 +374,7 @@ function LinhaDeTarefa({
   posicao: number;
   aoAlternar: (id: string, feita: boolean) => void;
 }) {
+  const { abrirTarefa } = usarEdicao();
   const feita = tarefa.concluidaEm !== null;
 
   return (
@@ -378,14 +387,15 @@ function LinhaDeTarefa({
         rotulo={tarefa.titulo}
         aoAlternar={() => aoAlternar(tarefa.id, !feita)}
       />
-      <Link
-        href={`/tarefa/${tarefa.id}`}
-        className={`flex-1 truncate text-[15px] no-underline transition-colors duration-200 ${
+      <button
+        type="button"
+        onClick={() => abrirTarefa(tarefa.id)}
+        className={`flex-1 truncate border-0 bg-transparent text-left text-[15px] transition-colors duration-200 ${
           feita ? "text-tinta-apagada line-through" : "text-tinta"
         }`}
       >
         {tarefa.titulo}
-      </Link>
+      </button>
     </div>
   );
 }

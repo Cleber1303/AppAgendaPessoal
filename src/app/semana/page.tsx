@@ -3,15 +3,15 @@
 // A visão da semana.
 //
 // Cada dia é uma caixa fechada que mostra só o resumo. Tocar abre o dia
-// inteiro — compromissos e tarefas, com e sem horário. Sete dias abertos
+// inteiro — eventos e tarefas, com e sem horário. Sete dias abertos
 // de uma vez não cabem na tela do celular, e o que você quer de relance é
 // "onde tem coisa", não o conteúdo de tudo.
 //
 // Hoje já começa aberto: é o dia que você veio ver.
 
-import Link from "next/link";
 import { useState } from "react";
 import { CaixaDeMarcar } from "@/components/CaixaDeMarcar";
+import { usarEdicao } from "@/components/Edicao";
 import { Carregando, Falhou } from "@/components/Avisos";
 import { carregarSemana, concluirTarefa, reabrirTarefa } from "@/lib/dados";
 import {
@@ -176,6 +176,7 @@ function CaixaDoDia({
   aoAlternarAbertura: () => void;
   aoAlternarTarefa: (id: string, feita: boolean) => void;
 }) {
+  const { abrirEvento } = usarEdicao();
   const ehHoje = faixa.dia === hoje();
   const pendentes = faixa.tarefas.filter((tarefa) => tarefa.concluidaEm === null).length;
   const vazio = faixa.eventos.length === 0 && faixa.tarefas.length === 0;
@@ -235,15 +236,17 @@ function CaixaDoDia({
           {vazio && <p className="m-0 text-[13px] text-tinta-apagada">Nada neste dia.</p>}
 
           {faixa.eventos.map((evento) => (
-            <div
+            <button
               key={evento.id}
-              className="mb-1.5 flex items-center gap-2.5 rounded-lg border border-borda bg-papel px-2.5 py-1.5"
+              type="button"
+              onClick={() => abrirEvento(evento.serieId, evento.dia)}
+              className="mb-1.5 flex w-full items-center gap-2.5 rounded-lg border border-borda bg-papel px-2.5 py-1.5 text-left text-tinta transition-transform duration-150 active:scale-[0.99]"
             >
               <span className="shrink-0 font-mono text-[11px] text-tinta-fraca">
                 {evento.horaInicio}
               </span>
               <span className="min-w-0 flex-1 truncate text-[13px]">{evento.titulo}</span>
-            </div>
+            </button>
           ))}
 
           {ancoradas.map((tarefa) => (
@@ -273,9 +276,9 @@ function resumo(faixa: DiaDaSemana, pendentes: number): string {
   const partes: string[] = [];
 
   if (faixa.eventos.length === 1) {
-    partes.push("1 compromisso");
+    partes.push("1 evento");
   } else if (faixa.eventos.length > 1) {
-    partes.push(`${faixa.eventos.length} compromissos`);
+    partes.push(`${faixa.eventos.length} eventos`);
   }
 
   if (pendentes === 1) {
@@ -300,6 +303,7 @@ function LinhaDeTarefa({
   tarefa: Tarefa;
   aoAlternar: (id: string, feita: boolean) => void;
 }) {
+  const { abrirTarefa } = usarEdicao();
   const feita = tarefa.concluidaEm !== null;
 
   return (
@@ -314,14 +318,15 @@ function LinhaDeTarefa({
         <span className="shrink-0 font-mono text-[11px] text-tinta-fraca">{tarefa.hora}</span>
       )}
 
-      <Link
-        href={`/tarefa/${tarefa.id}`}
-        className={`min-w-0 flex-1 truncate text-[13.5px] no-underline transition-colors duration-200 ${
+      <button
+        type="button"
+        onClick={() => abrirTarefa(tarefa.id)}
+        className={`min-w-0 flex-1 truncate border-0 bg-transparent text-left text-[13.5px] transition-colors duration-200 ${
           feita ? "text-tinta-apagada line-through" : "text-tinta"
         }`}
       >
         {tarefa.titulo}
-      </Link>
+      </button>
     </div>
   );
 }

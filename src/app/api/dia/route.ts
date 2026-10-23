@@ -13,7 +13,12 @@ import {
   somarDias,
   type DiaTexto,
 } from "@/lib/datas";
-import { expandirEventos, habitoNoDia, tarefaParaTela } from "@/lib/servidor";
+import {
+  expandirEventos,
+  habitoNoDia,
+  pausasParaTela,
+  tarefaParaTela,
+} from "@/lib/servidor";
 import type { Dia } from "@/lib/tipos";
 
 export async function GET(requisicao: Request) {
@@ -37,8 +42,10 @@ export async function GET(requisicao: Request) {
         orderBy: [{ hora: "asc" }, { criadoEm: "asc" }],
       }),
       prisma.habito.findMany({
+        // Pausado não aparece no dia: é exatamente o que pausar quer dizer.
         where: { deletadoEm: null, ativo: true },
         orderBy: { ordem: "asc" },
+        include: { pausas: true },
       }),
       prisma.registroHabito.findMany({
         where: {
@@ -85,7 +92,12 @@ export async function GET(requisicao: Request) {
     doDia: tarefas.filter((tarefa) => tarefa.tipo === "do-dia"),
     habitos: habitos
       .map((habito) =>
-        habitoNoDia(habito, dia, marcadosPorHabito.get(habito.id) ?? new Set()),
+        habitoNoDia(
+          habito,
+          dia,
+          marcadosPorHabito.get(habito.id) ?? new Set(),
+          pausasParaTela(habito.pausas),
+        ),
       )
       // Hábito de dias fixos só aparece no dia dele.
       .filter((habito) => habito.estado !== "nao-era-dia"),

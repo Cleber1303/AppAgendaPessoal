@@ -50,10 +50,21 @@ export type Habito = {
   metaPorSemana: number | null;
   diasDaSemana: number[];
   ordem: number;
+  /** Falso enquanto o hábito está pausado. */
+  ativo: boolean;
 };
 
-/** O estado de um hábito num dia específico. */
-export type EstadoDoHabito = "feito" | "falhou" | "nao-era-dia" | "futuro";
+/**
+ * O estado de um hábito num dia específico.
+ *
+ * "pausado" existe separado de "nao-era-dia" porque os dois somem da
+ * cobrança pelo mesmo motivo aparente, mas por razões diferentes: um é
+ * "não era para fazer nesse dia", o outro é "você parou nessa época".
+ */
+export type EstadoDoHabito = "feito" | "falhou" | "nao-era-dia" | "pausado" | "futuro";
+
+/** Um período em que o hábito esteve parado. `fim` nulo = ainda parado. */
+export type Pausa = { inicio: DiaTexto; fim: DiaTexto | null };
 
 export type HabitoNoDia = Habito & {
   estado: EstadoDoHabito;

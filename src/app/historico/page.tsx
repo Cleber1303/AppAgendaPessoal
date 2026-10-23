@@ -7,7 +7,8 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Carregando, Falhou, IconeVoltar, Vazio } from "@/components/Avisos";
+import { Carregando, Falhou, IconeSeta, IconeVoltar, Vazio } from "@/components/Avisos";
+import { usarEdicao } from "@/components/Edicao";
 import { carregarHistorico } from "@/lib/dados";
 import { diaBarraMes, mesEAno } from "@/lib/datas";
 import type { ItemDoHistorico } from "@/lib/tipos";
@@ -16,6 +17,7 @@ import { usarDados } from "@/lib/usarDados";
 type Filtro = "tudo" | "feitas" | "nao-feitas";
 
 export default function TelaHistorico() {
+  const { abrirTarefa } = usarEdicao();
   const [busca, setBusca] = useState("");
   const [filtro, setFiltro] = useState<Filtro>("tudo");
   const { dados, carregando, erro, recarregar } = usarDados(() => carregarHistorico());
@@ -76,10 +78,12 @@ export default function TelaHistorico() {
               </div>
 
               {grupo.itens.map((item, posicao) => (
-                <div
+                <button
                   key={item.id}
+                  type="button"
+                  onClick={() => abrirTarefa(item.id)}
                   style={{ animationDelay: `${Math.min(posicao, 8) * 22}ms` }}
-                  className="entra flex min-h-12 items-center gap-3 border-b border-borda-leve"
+                  className="entra flex min-h-12 w-full items-center gap-3 border-0 border-b border-borda-leve bg-transparent text-left text-tinta"
                 >
                   <Marca feita={item.feita} />
                   <span
@@ -92,7 +96,10 @@ export default function TelaHistorico() {
                   <span className="shrink-0 font-mono text-[11px] text-tinta-apagada">
                     {diaBarraMes(item.encerradaEm)}
                   </span>
-                </div>
+                  <span className="shrink-0 text-tinta-apagada">
+                    <IconeSeta />
+                  </span>
+                </button>
               ))}
             </div>
           ))}

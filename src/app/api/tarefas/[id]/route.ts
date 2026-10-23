@@ -90,6 +90,12 @@ export async function PATCH(requisicao: Request, contexto: Contexto) {
     return NextResponse.json(tarefaParaTela(atualizada));
   }
 
+  // A tela já barra título vazio, mas a rota não pode confiar nisso: uma
+  // tarefa sem título fica invisível em todas as listas.
+  if (corpo.titulo !== undefined && String(corpo.titulo).trim() === "") {
+    return NextResponse.json({ erro: "o título não pode ficar vazio" }, { status: 400 });
+  }
+
   const atualizada = await prisma.tarefa.update({
     where: { id },
     data: {

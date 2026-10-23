@@ -6,7 +6,7 @@
 // dessa lista em todo app de tarefas: teto de itens e envelhecimento.
 //
 // A ordem manual é arrastando pela alça de pontinhos à esquerda. Arrastar
-// enquanto está ordenado por idade troca o modo sozinho: mover um item é
+// enquanto está ordenado por tempo troca o modo sozinho: mover um item é
 // dizer "eu quero este aqui", e isso é ordem manual por definição.
 
 import {
@@ -30,9 +30,9 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import Link from "next/link";
 import { useState } from "react";
 import { CaixaDeMarcar } from "@/components/CaixaDeMarcar";
+import { usarEdicao } from "@/components/Edicao";
 import { Carregando, Falhou, Vazio } from "@/components/Avisos";
 import { carregarPilha, concluirTarefa, reordenarPilha } from "@/lib/dados";
 import { DIAS_PARA_ENVELHECER, TETO_DA_PILHA, type ItemDaPilha } from "@/lib/tipos";
@@ -127,7 +127,7 @@ export default function TelaPilha() {
             Ordem manual
           </BotaoDeOrdem>
           <BotaoDeOrdem ativo={ordenacao === "idade"} aoClicar={() => setOrdenacao("idade")}>
-            Por idade
+            Por tempo
           </BotaoDeOrdem>
         </div>
       </header>
@@ -212,6 +212,7 @@ function ItemDaLista({
   item: ItemDaPilha;
   aoConcluir: (id: string) => void;
 }) {
+  const { abrirTarefa } = usarEdicao();
   const {
     attributes,
     listeners,
@@ -263,12 +264,13 @@ function ItemDaLista({
         aoAlternar={() => aoConcluir(item.id)}
       />
 
-      <Link
-        href={`/tarefa/${item.id}`}
-        className="min-w-0 flex-1 truncate text-[14.5px] text-tinta no-underline"
+      <button
+        type="button"
+        onClick={() => abrirTarefa(item.id)}
+        className="min-w-0 flex-1 truncate border-0 bg-transparent text-left text-[14.5px] text-tinta"
       >
         {item.titulo}
-      </Link>
+      </button>
 
       <span
         className={`shrink-0 rounded-[5px] px-1.5 py-0.5 font-mono text-[11px] ${

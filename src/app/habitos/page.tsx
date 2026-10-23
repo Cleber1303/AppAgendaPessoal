@@ -91,10 +91,17 @@ function CartaoDeHabito({ habito }: { habito: HabitoComMapa }) {
   return (
     <Link
       href={`/habitos/${habito.id}`}
-      className="entra mb-3 block rounded-xl border border-borda bg-papel px-3.5 py-3 text-tinta no-underline transition-transform duration-150 active:scale-[0.99]"
+      className={`entra mb-3 block rounded-xl border border-borda bg-papel px-3.5 py-3 text-tinta no-underline transition-transform duration-150 active:scale-[0.99] ${
+        habito.ativo ? "" : "opacity-60"
+      }`}
     >
       <div className="flex items-center gap-2.5">
         <span className="min-w-0 flex-1 text-[15.5px] font-medium">{habito.nome}</span>
+        {!habito.ativo && (
+          <span className="shrink-0 rounded-md bg-[#f0f0ec] px-1.5 py-0.5 font-mono text-[10px] text-tinta-fraca">
+            pausado
+          </span>
+        )}
         <span className="shrink-0 font-mono text-[11px] text-tinta-fraca">
           {descricaoDaMeta}
         </span>
@@ -136,6 +143,9 @@ function Celula({ estado, dia }: { estado: EstadoDoHabito; dia: string }) {
     feito: "#2E6F5E",
     falhou: "#DBDBD4",
     "nao-era-dia": "#F4F4F1",
+    // Pausado é neutro como "não era dia": nos dois casos não havia
+    // cobrança, então não pode parecer falha.
+    pausado: "#F4F4F1",
     futuro: "#F4F4F1",
   };
 

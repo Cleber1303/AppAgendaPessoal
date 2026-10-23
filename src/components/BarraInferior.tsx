@@ -19,7 +19,11 @@ export function BarraInferior() {
   // não precisa mais estar nesta lista.
   //
   // Na tela de senha não há app para navegar ainda.
-  if (caminho.startsWith("/tarefa") || caminho.startsWith("/entrar")) {
+  if (
+    caminho.startsWith("/tarefa") ||
+    caminho.startsWith("/evento") ||
+    caminho.startsWith("/entrar")
+  ) {
     return null;
   }
 
